@@ -93,7 +93,3 @@ typings/
 .idea
 .vscode/
 *.sublime-workspace
-
-# Artifacts
-.agent/sessions/
-docs/sessions/
