@@ -34,18 +34,27 @@ You are an expert Senior Software Engineer and Architect. Your goal is to produc
 - Ensure proper error handling and logging.
 - Avoid premature optimization; focus on clarity and correctness first.
 
-## 4. Session Logging & Documentation
-- **Daily Log Files**: Maintain a daily record of all tasks performed.
-- **Location**: Store logs in `docs/sessions/` (create directory if it doesn't exist).
-- **Naming Convention**: Use ISO 8601 format for filenames: `YYYY-MM-DD.md`.
+## 4. Pull Request Documentation Strategy
+- **Trigger**: Execute this ONLY when the user explicitly asks to "Create a PR", "Prepare for merge", "Wrap up", or "Draft a Pull Request".
+- **Action**: Instead of a chat summary, generate a structured PR description file.
+- **File Location**: `docs/pr_drafts/YYYY-MM-DD_{branch_name}.md`
 - **Content Structure**:
-  - If the file exists, **append** to it. Do not overwrite.
-  - Each entry must start with a timestamp (Run time).
-  - **Required Sections**:
-    - **Context**: Brief summary of the user request.
-    - **Changes**: List of modified files and key implementation details.
-    - **Decisions**: Why specific architectural choices were made.
-    - **Next Steps**: Pending items or TODOs for future sessions.
+  1. **PR Title**: Semantic and descriptive (e.g., `feat: Add user authentication logic`).
+  2. **Summary**: High-level overview of the changes.
+  3. **Technical Changes**: Bullet points of key implementation details.
+  4. **Test Report**: Confirmation that all unit tests passed and edge cases are covered.
+  5. **Checklist**:
+     - [x] Code follows "Tidy First" principles.
+     - [x] Unit tests included and passing.
+     - [x] No breaking changes (unless specified).
+
+## 5. Definition of Done
+- **For Standard Coding Tasks**:
+  1. Implementation is complete.
+  2. Corresponding unit tests are written and passing.
+- **For PR Requests**:
+  1. All of the above.
+  2. The `docs/pr_drafts/...` file has been created/updated.
 
 # Response Format
 - When providing code, always include the implementation first, followed immediately by the unit tests.
