@@ -21,6 +21,9 @@ function toggleReleaf() {
 
     if (existingContainer) {
         // If active, remove it (restore original view)
+        // Remove listeners
+        document.removeEventListener('keydown', handleKeyNavigation);
+        window.removeEventListener('resize', handleResize);
         existingContainer.remove();
         document.body.style.overflow = ""; // Restore scrolling
     } else {
@@ -168,6 +171,9 @@ function enableReleaf() {
     // Keyboard Support
     document.addEventListener('keydown', handleKeyNavigation);
 
+    // Resize Support
+    window.addEventListener('resize', handleResize);
+
     navContainer.appendChild(prevBtn);
     navContainer.appendChild(nextBtn);
 
@@ -178,6 +184,26 @@ function enableReleaf() {
 
     // Prevent background scrolling
     document.body.style.overflow = "hidden";
+}
+
+let resizeTimeout;
+function handleResize() {
+    // Debounce resize handling
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        const content = document.querySelector('.releaf-content');
+        if (!content) return;
+
+        // Snap to the nearest page
+        const pageWidth = window.innerWidth;
+        const currentScroll = content.scrollLeft;
+        const pageIndex = Math.round(currentScroll / pageWidth);
+
+        content.scrollTo({
+            left: pageIndex * pageWidth,
+            behavior: 'smooth'
+        });
+    }, 100);
 }
 
 function handleKeyNavigation(e) {
