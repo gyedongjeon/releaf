@@ -134,6 +134,31 @@ function enableReleaf() {
         }
     };
 
+    // Font Size Controls
+    let currentFontSize = 20;
+    const minFontSize = 14;
+    const maxFontSize = 32;
+
+    const decreaseFontBtn = document.createElement("button");
+    decreaseFontBtn.className = "releaf-btn";
+    decreaseFontBtn.textContent = "A-";
+    decreaseFontBtn.onclick = () => {
+        if (currentFontSize > minFontSize) {
+            currentFontSize -= 2;
+            container.style.setProperty('--releaf-font-size', `${currentFontSize}px`);
+        }
+    };
+
+    const increaseFontBtn = document.createElement("button");
+    increaseFontBtn.className = "releaf-btn";
+    increaseFontBtn.textContent = "A+";
+    increaseFontBtn.onclick = () => {
+        if (currentFontSize < maxFontSize) {
+            currentFontSize += 2;
+            container.style.setProperty('--releaf-font-size', `${currentFontSize}px`);
+        }
+    };
+
     // Close Button
     const closeBtn = document.createElement("button");
     closeBtn.className = "releaf-btn";
@@ -141,6 +166,8 @@ function enableReleaf() {
     closeBtn.onclick = toggleReleaf;
 
     header.appendChild(themeBtn);
+    header.appendChild(decreaseFontBtn);
+    header.appendChild(increaseFontBtn);
     header.appendChild(closeBtn);
 
     // Create the content wrapper

@@ -5,6 +5,7 @@
   --releaf-text: #333333;
   --releaf-accent: #5e4b35;
   --releaf-font: "Georgia", "Times New Roman", serif;
+  --releaf-font-size: 20px;
 }
 
 /* Themes */
@@ -97,7 +98,7 @@
   /* Viewport width - padding */
   column-gap: 80px;
 
-  font-size: 20px;
+  font-size: var(--releaf-font-size);
 
   /* Horizontal scrolling for pages */
   overflow-x: hidden;

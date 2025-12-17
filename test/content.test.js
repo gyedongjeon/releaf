@@ -65,6 +65,13 @@ describe('Re:Leaf Content Script', () => {
         const closeBtn = container.querySelector('.releaf-btn'); // Matches any button with this class
         expect(closeBtn).not.toBeNull();
 
+        // Use textContent matcher effectively
+        const buttons = Array.from(container.querySelectorAll('.releaf-btn')).map(b => b.textContent);
+        expect(buttons).toContain('Theme');
+        expect(buttons).toContain('A-');
+        expect(buttons).toContain('A+');
+        expect(buttons).toContain('Close');
+
         // Check for Navigation controls
         const navButtons = container.querySelectorAll('.releaf-nav .releaf-btn');
         expect(navButtons.length).toBe(2); // Prev(0) and Next(1)
