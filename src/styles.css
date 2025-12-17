@@ -1,25 +1,169 @@
 /* Re:Leaf Styles */
 
+:root {
+  --releaf-bg: #fcf6e5;
+  --releaf-text: #333333;
+  --releaf-accent: #5e4b35;
+  --releaf-font: "Georgia", "Times New Roman", serif;
+}
+
+/* Themes */
+.releaf-theme-light {
+  --releaf-bg: #ffffff;
+  --releaf-text: #222222;
+  --releaf-accent: #eaeaea;
+}
+
+.releaf-theme-sepia {
+  --releaf-bg: #fcf6e5;
+  --releaf-text: #4a3c31;
+  --releaf-accent: #eaddcf;
+}
+
+.releaf-theme-dark {
+  --releaf-bg: #1a1a1a;
+  --releaf-text: #d4d4d4;
+  --releaf-accent: #333333;
+}
+
 #releaf-container {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #fcf6e5; /* Paper-like off-white */
-  color: #333;
-  z-index: 2147483647; /* Max z-index */
-  overflow-y: auto;
-  font-family: "Georgia", "Times New Roman", serif;
-  line-height: 1.6;
-  padding: 40px;
+  background-color: var(--releaf-bg);
+  color: var(--releaf-text);
+  z-index: 2147483647;
+  /* Max z-index */
+  /* Disable vertical scroll */
+  overflow: hidden;
+  font-family: var(--releaf-font);
+  line-height: 1.8;
+  padding: 0;
+  box-sizing: border-box;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Top Bar */
+.releaf-header {
+  position: fixed;
+  /* Fixed to stay on top */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: var(--releaf-bg);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 15px;
+  border-bottom: 1px solid var(--releaf-accent);
+  transition: background-color 0.3s, border-color 0.3s;
+  z-index: 10;
   box-sizing: border-box;
 }
 
+.releaf-btn {
+  background: none;
+  border: 1px solid var(--releaf-text);
+  color: var(--releaf-text);
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: sans-serif;
+  opacity: 0.7;
+}
+
+.releaf-btn:hover {
+  opacity: 1;
+}
+
+/* Pagination Content */
 .releaf-content {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
+  /* Calculated height: 100vh - header(60px) - padding(40px) */
+  height: calc(100vh - 100px);
+  margin-top: 80px;
+  /* Space for fixed header */
+  margin-bottom: 20px;
+  padding: 0 40px;
+
+  /* CSS Columns for Pagination */
+  column-fill: auto;
+  column-width: calc(100vw - 80px);
+  /* Viewport width - padding */
+  column-gap: 80px;
+
   font-size: 20px;
-  white-space: pre-wrap; /* Preserve newlines from textContent */
+
+  /* Horizontal scrolling for pages */
+  overflow-x: hidden;
+  /* Hidden because we scroll programmatically */
+  overflow-y: hidden;
+}
+
+/* Navigation Controls Overlay */
+.releaf-nav {
+  position: fixed;
+  bottom: 20px;
+  right: 40px;
+  display: flex;
+  gap: 10px;
+  z-index: 20;
+}
+
+/* Content Elements */
+.releaf-content h1,
+.releaf-content h2,
+.releaf-content h3 {
+  font-family: "Helvetica Neue", "Arial", sans-serif;
+  font-weight: 700;
+  margin-top: 1em;
+  /* Reduced for single page view */
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+  break-inside: avoid;
+  /* Prevent header splitting */
+}
+
+.releaf-content p {
+  margin-bottom: 1.5em;
+  text-align: justify;
+}
+
+.releaf-content img {
+  display: block;
+  margin: 1em auto;
+  max-width: 100%;
+  max-height: 80vh;
+  /* Prevent images larger than page */
+  border-radius: 4px;
+  break-inside: avoid;
+}
+
+.releaf-content blockquote {
+  border-left: 4px solid var(--releaf-accent);
+  margin: 1.5em 0;
+  padding-left: 1em;
+  font-style: italic;
+  opacity: 0.8;
+  break-inside: avoid;
+}
+
+.releaf-content code,
+.releaf-content pre {
+  background-color: var(--releaf-accent);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+  break-inside: avoid;
+}
+
+.releaf-content pre {
+  padding: 15px;
+  overflow-x: auto;
+  white-space: pre-wrap;
 }

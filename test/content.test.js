@@ -11,7 +11,10 @@ global.chrome = {
     },
 };
 
-const { toggleReleaf, enableReleaf } = require('../src/content');
+// Mock window.alert
+global.alert = jest.fn();
+
+const { toggleReleaf, enableReleaf, extractContent } = require('../src/content');
 
 describe('Re:Leaf Content Script', () => {
     beforeEach(() => {
@@ -20,12 +23,16 @@ describe('Re:Leaf Content Script', () => {
         document.body.style.overflow = '';
     });
 
-    test('enableReleaf creates the container and extracts content', () => {
-        // Setup initial DOM with paragraphs
+    test('enableReleaf creates the container and extracts content preserving structure', () => {
+        // Setup initial DOM with structured content
         document.body.innerHTML = `
-      <p>Paragraph 1</p>
-      <p>Paragraph 2</p>
-      <div>Ignored content</div>
+      <main>
+        <h1>Title</h1>
+        <p>Paragraph 1</p>
+        <h2>Subtitle</h2>
+        <p>Paragraph 2</p>
+        <button>Click me</button> <!-- Should be ignored -->
+      </main>
     `;
 
         enableReleaf();
@@ -34,7 +41,24 @@ describe('Re:Leaf Content Script', () => {
         expect(container).not.toBeNull();
 
         const content = container.querySelector('.releaf-content');
-        expect(content.textContent).toBe('Paragraph 1\n\nParagraph 2');
+
+        // Check that H1 and P are present in the output
+        expect(content.innerHTML).toContain('<h1>Title</h1>');
+        expect(content.innerHTML).toContain('<p>Paragraph 1</p>');
+        expect(content.innerHTML).toContain('<h2>Subtitle</h2>');
+
+        // Check that button is NOT present
+        expect(content.innerHTML).not.toContain('<button>');
+
+        // Check for UI controls
+        const closeBtn = container.querySelector('.releaf-btn'); // Matches any button with this class
+        expect(closeBtn).not.toBeNull();
+
+        // Check for Navigation controls
+        const navButtons = container.querySelectorAll('.releaf-nav .releaf-btn');
+        expect(navButtons.length).toBe(2); // Prev(0) and Next(1)
+        expect(navButtons[0].textContent).toContain('Prev');
+        expect(navButtons[1].textContent).toContain('Next');
 
         expect(document.body.style.overflow).toBe('hidden');
     });
