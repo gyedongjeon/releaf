@@ -83,11 +83,12 @@
 
 /* Pagination Content */
 .releaf-content {
-  /* Calculated height: 100vh - header(60px) - padding(40px) */
-  height: calc(100vh - 100px);
+  /* Calculated height: 100vh - header(60px) - bottom_nav_space(60px) - top_margin(80px) */
+  /* We need to ensure columns stop before they hit the buttons at bottom: 20px */
+  /* Let's reserve ~80px at the bottom. */
+  height: calc(100vh - 160px);
   margin-top: 80px;
   /* Space for fixed header */
-  margin-bottom: 20px;
   padding: 0 40px;
 
   /* CSS Columns for Pagination */
