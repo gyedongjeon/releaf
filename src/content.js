@@ -179,20 +179,30 @@ function enableReleaf() {
     const navContainer = document.createElement("div");
     navContainer.className = "releaf-nav";
 
+    const getPageWidth = () => window.innerWidth; // Since columns + gap = 100vw
+
     // Prev Button
     const prevBtn = document.createElement("button");
     prevBtn.className = "releaf-btn";
-    prevBtn.textContent = "← Prev"; // textContent is safer for JSDOM
+    prevBtn.textContent = "← Prev";
     prevBtn.onclick = () => {
-        content.scrollBy({ left: -window.innerWidth, behavior: 'smooth' });
+        const pageWidth = getPageWidth();
+        const currentScroll = content.scrollLeft;
+        // Snap to previous page
+        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
+        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
     };
 
     // Next Button
     const nextBtn = document.createElement("button");
     nextBtn.className = "releaf-btn";
-    nextBtn.textContent = "Next →"; // textContent is safer for JSDOM
+    nextBtn.textContent = "Next →";
     nextBtn.onclick = () => {
-        content.scrollBy({ left: window.innerWidth, behavior: 'smooth' });
+        const pageWidth = getPageWidth();
+        const currentScroll = content.scrollLeft;
+        // Snap to next page
+        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
+        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
     };
 
     // Keyboard Support
@@ -237,10 +247,16 @@ function handleKeyNavigation(e) {
     const content = document.querySelector('.releaf-content');
     if (!content) return;
 
+    const pageWidth = window.innerWidth;
+
     if (e.key === 'ArrowRight') {
-        content.scrollBy({ left: window.innerWidth, behavior: 'smooth' });
+        const currentScroll = content.scrollLeft;
+        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
+        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
     } else if (e.key === 'ArrowLeft') {
-        content.scrollBy({ left: -window.innerWidth, behavior: 'smooth' });
+        const currentScroll = content.scrollLeft;
+        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
+        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
     } else if (e.key === 'Escape') {
         toggleReleaf();
     }

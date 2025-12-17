@@ -74,9 +74,18 @@ describe('Re:Leaf Content Script', () => {
 
         // Check for Navigation controls
         const navButtons = container.querySelectorAll('.releaf-nav .releaf-btn');
-        expect(navButtons.length).toBe(2); // Prev(0) and Next(1)
-        expect(navButtons[0].textContent).toContain('Prev');
-        expect(navButtons[1].textContent).toContain('Next');
+        expect(navButtons.length).toBe(2);
+
+        // Mock scrollTo
+        content.scrollTo = jest.fn();
+
+        // Click Next
+        navButtons[1].click();
+        expect(content.scrollTo).toHaveBeenCalled();
+
+        // Click Prev
+        navButtons[0].click();
+        expect(content.scrollTo).toHaveBeenCalled();
 
         expect(document.body.style.overflow).toBe('hidden');
     });
