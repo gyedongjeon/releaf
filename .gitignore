@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Mac
+.DS_Store
+
+# Testing
+coverage/
+
+# Artifacts
+.agent/

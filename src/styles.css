@@ -1,0 +1,25 @@
+/* Re:Leaf Styles */
+
+#releaf-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #fcf6e5; /* Paper-like off-white */
+  color: #333;
+  z-index: 2147483647; /* Max z-index */
+  overflow-y: auto;
+  font-family: "Georgia", "Times New Roman", serif;
+  line-height: 1.6;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.releaf-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-size: 20px;
+  white-space: pre-wrap; /* Preserve newlines from textContent */
+}
