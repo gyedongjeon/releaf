@@ -35,14 +35,32 @@ function toggleReleaf() {
  */
 function extractContent() {
     // Heuristic: Try to find the main article content.
-    // Fallback to body if no obvious article is found.
-    const article = document.querySelector('article') || document.querySelector('main') || document.body;
+    // Order matters: specific IDs often used for main content > semantic tags > fallback
+    const candidates = [
+        'article', 'main', '#content', '#main', '#bodyContent', '.main-content', '.post-content', '.article-content'
+    ];
+
+    let article = null;
+    for (const selector of candidates) {
+        article = document.querySelector(selector);
+        if (article) break;
+    }
+    article = article || document.body;
 
     // Create a clone to manipulate without affecting the original page during extraction
     const clone = article.cloneNode(true);
 
     // Remove scripts, styles, and interactive elements that clutter reading
-    const unwanted = clone.querySelectorAll('script, style, nav, footer, iframe, form, button, [role="banner"], [role="navigation"]');
+    // Expanded list to include common sidebar/nav patterns
+    const unwantedSelectors = [
+        'script', 'style', 'nav', 'footer', 'iframe', 'form', 'button',
+        '[role="banner"]', '[role="navigation"]', '[role="complementary"]', '[role="search"]',
+        '.sidebar', '#sidebar', '.menu', '#menu', '.nav', '.navigation', '.toc', '#toc',
+        '.language-list', '.interlanguage-link', '#p-lang', // Specific to language menus
+        '.ad', '.advertisement', '.social-share'
+    ];
+
+    const unwanted = clone.querySelectorAll(unwantedSelectors.join(', '));
     unwanted.forEach(el => el.remove());
 
     // Filter for readable elements

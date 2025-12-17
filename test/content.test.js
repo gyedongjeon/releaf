@@ -27,13 +27,18 @@ describe('Re:Leaf Content Script', () => {
     test('enableReleaf creates the container and extracts content preserving structure', () => {
         // Setup initial DOM with structured content
         document.body.innerHTML = `
-      <main>
+      <div id="content">
         <h1>Title</h1>
         <p>Paragraph 1</p>
+        <div id="sidebar">
+            <a href="#">Sidebar Link</a>
+            <ul><li>Language 1</li><li>Language 2</li></ul>
+        </div>
         <h2>Subtitle</h2>
         <p>Paragraph 2</p>
+        <div class="language-list">English, Spanish</div>
         <button>Click me</button> <!-- Should be ignored -->
-      </main>
+      </div>
     `;
 
         enableReleaf();
@@ -47,6 +52,11 @@ describe('Re:Leaf Content Script', () => {
         expect(content.innerHTML).toContain('<h1>Title</h1>');
         expect(content.innerHTML).toContain('<p>Paragraph 1</p>');
         expect(content.innerHTML).toContain('<h2>Subtitle</h2>');
+
+        // Check that sidebar/language content is NOT present
+        expect(content.innerHTML).not.toContain('Sidebar Link');
+        expect(content.innerHTML).not.toContain('Language 1');
+        expect(content.innerHTML).not.toContain('English, Spanish');
 
         // Check that button is NOT present
         expect(content.innerHTML).not.toContain('<button>');
