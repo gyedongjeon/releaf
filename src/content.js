@@ -5,6 +5,14 @@
 
 const RELEAF_Container_ID = "releaf-container";
 
+// Prevent duplicate initialization
+if (window.hasRunReleaf) {
+    // If already loaded, we don't need to add listeners again.
+    // We can just exit, as the listeners are already active.
+    throw new Error("Re:Leaf already initialized");
+}
+window.hasRunReleaf = true;
+
 /**
  * Toggles the Re:Leaf view on the current page.
  */

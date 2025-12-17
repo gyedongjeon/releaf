@@ -21,6 +21,7 @@ describe('Re:Leaf Content Script', () => {
         // Reset DOM
         document.body.innerHTML = '';
         document.body.style.overflow = '';
+        window.hasRunReleaf = false; // Reset the flag
     });
 
     test('enableReleaf creates the container and extracts content preserving structure', () => {
