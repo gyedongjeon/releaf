@@ -72,41 +72,6 @@
   }
 }
 
-/* Top Bar - Glassmorphism */
-.releaf-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 64px;
-
-  /* Glass effect */
-  background-color: rgba(var(--releaf-bg-rgb), 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(var(--releaf-text-rgb), 0.1);
-
-  padding: 0 40px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-
-  z-index: 10;
-  box-sizing: border-box;
-  transition: all 0.3s ease;
-
-  animation: releaf-fade-in 0.4s ease-out;
-}
-
-/* Immersive Mode - Auto Hide */
-.releaf-ui-hidden .releaf-header,
-.releaf-ui-hidden .releaf-nav {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s ease-in-out;
-}
-
 .releaf-btn {
   background: transparent;
   border: 1px solid rgba(var(--releaf-text-rgb), 0.2);
@@ -162,16 +127,6 @@
   overflow-y: hidden;
 
   animation: releaf-fade-in 0.6s ease-out;
-}
-
-/* Navigation Controls Overlay */
-.releaf-nav {
-  position: fixed;
-  bottom: 20px;
-  right: 40px;
-  display: flex;
-  gap: 10px;
-  z-index: 20;
 }
 
 /* Content Elements */
@@ -264,21 +219,21 @@
   left: 0;
   width: 100%;
   height: 64px;
-  
+
   /* Glass effect */
   background-color: rgba(var(--releaf-bg-rgb), 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(var(--releaf-text-rgb), 0.1);
-  
+
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16px;
-  
+
   z-index: 15;
   box-sizing: border-box;
-  
+
   /* Hidden by default */
   opacity: 0;
   transform: translateY(100%);

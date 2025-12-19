@@ -72,19 +72,24 @@ describe('Re:Leaf Content Script', () => {
         expect(buttonTitles).toContain('Increase Font Size');
         expect(buttonTitles).toContain('Close Reader View');
 
-        // Check for Navigation controls
-        const navButtons = container.querySelectorAll('.releaf-nav .releaf-btn');
-        expect(navButtons.length).toBe(2);
+        // Check for Touch Zones (ebook-style navigation)
+        const touchZones = container.querySelector('.releaf-touch-zones');
+        expect(touchZones).not.toBeNull();
+        expect(touchZones.children.length).toBe(3); // left, center, right
 
-        // Mock scrollTo
+        // Check for Bottom Menu
+        const bottomMenu = container.querySelector('.releaf-bottom-menu');
+        expect(bottomMenu).not.toBeNull();
+
+        // Mock scrollTo for navigation tests
         content.scrollTo = jest.fn();
 
-        // Click Next
-        navButtons[1].click();
+        // Simulate left zone click (previous page)
+        touchZones.querySelector('.releaf-touch-zone-left').click();
         expect(content.scrollTo).toHaveBeenCalled();
 
-        // Click Prev
-        navButtons[0].click();
+        // Simulate right zone click (next page)
+        touchZones.querySelector('.releaf-touch-zone-right').click();
         expect(content.scrollTo).toHaveBeenCalled();
 
         expect(document.body.style.overflow).toBe('hidden');

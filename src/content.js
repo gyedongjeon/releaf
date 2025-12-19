@@ -119,10 +119,6 @@ function enableReleaf() {
     container.id = RELEAF_Container_ID;
     container.className = "releaf-theme-light"; // Default theme
 
-    // Create Header
-    const header = document.createElement("div");
-    header.className = "releaf-header";
-
     // Helper to create SVG icons
     const createIcon = (svgPath) => {
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -141,12 +137,10 @@ function enableReleaf() {
     // Icons path data
     const ICONS = {
         theme: '<circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>', // Sun
-        close: '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>', // X
-        prev: '<polyline points="15 18 9 12 15 6"></polyline>', // Chevron Left
-        next: '<polyline points="9 18 15 12 9 6"></polyline>' // Chevron Right
+        close: '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>' // X
     };
 
-    // Theme Toggle Button
+    // Theme Toggle Button (for bottom menu)
     const themeBtn = document.createElement("button");
     themeBtn.className = "releaf-btn";
     themeBtn.title = "Toggle Theme";
@@ -154,11 +148,11 @@ function enableReleaf() {
     themeBtn.onclick = () => {
         const current = container.className;
         if (current.includes("theme-light")) {
-            container.className = "releaf-theme-sepia";
+            container.className = container.className.replace("theme-light", "theme-sepia");
         } else if (current.includes("theme-sepia")) {
-            container.className = "releaf-theme-dark";
+            container.className = container.className.replace("theme-sepia", "theme-dark");
         } else {
-            container.className = "releaf-theme-light";
+            container.className = container.className.replace("theme-dark", "theme-light");
         }
     };
 
@@ -170,7 +164,7 @@ function enableReleaf() {
     const decreaseFontBtn = document.createElement("button");
     decreaseFontBtn.className = "releaf-btn";
     decreaseFontBtn.title = "Decrease Font Size";
-    decreaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold;">A-</span>'; // Keep A- as text for clarity
+    decreaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold;">A-</span>';
     decreaseFontBtn.onclick = () => {
         if (currentFontSize > minFontSize) {
             currentFontSize -= 2;
@@ -181,7 +175,7 @@ function enableReleaf() {
     const increaseFontBtn = document.createElement("button");
     increaseFontBtn.className = "releaf-btn";
     increaseFontBtn.title = "Increase Font Size";
-    increaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold; font-size: 1.2em;">A+</span>'; // Keep A+ as text
+    increaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold; font-size: 1.2em;">A+</span>';
     increaseFontBtn.onclick = () => {
         if (currentFontSize < maxFontSize) {
             currentFontSize += 2;
@@ -189,17 +183,12 @@ function enableReleaf() {
         }
     };
 
-    // Close Button
+    // Close Button (for bottom menu)
     const closeBtn = document.createElement("button");
     closeBtn.className = "releaf-btn";
     closeBtn.title = "Close Reader View";
     closeBtn.appendChild(createIcon(ICONS.close));
     closeBtn.onclick = toggleReleaf;
-
-    header.appendChild(themeBtn);
-    header.appendChild(decreaseFontBtn);
-    header.appendChild(increaseFontBtn);
-    header.appendChild(closeBtn);
 
     // Create the content wrapper
     const content = document.createElement("div");
@@ -208,21 +197,21 @@ function enableReleaf() {
 
     // Navigation functions (used by touch zones and keyboard)
     const getPageWidth = () => window.innerWidth;
-    
+
     const goToPrevPage = () => {
         const pageWidth = getPageWidth();
         const currentScroll = content.scrollLeft;
         const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
         content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
     };
-    
+
     const goToNextPage = () => {
         const pageWidth = getPageWidth();
         const currentScroll = content.scrollLeft;
         const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
         content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
     };
-    
+
     const toggleMenu = () => {
         container.classList.toggle('releaf-menu-visible');
     };
@@ -230,22 +219,22 @@ function enableReleaf() {
     // Touch Zones Container
     const touchZones = document.createElement("div");
     touchZones.className = "releaf-touch-zones";
-    
+
     // Left zone (Previous page)
     const leftZone = document.createElement("div");
     leftZone.className = "releaf-touch-zone releaf-touch-zone-left";
     leftZone.onclick = goToPrevPage;
-    
+
     // Center zone (Toggle menu)
     const centerZone = document.createElement("div");
     centerZone.className = "releaf-touch-zone releaf-touch-zone-center";
     centerZone.onclick = toggleMenu;
-    
+
     // Right zone (Next page)
     const rightZone = document.createElement("div");
     rightZone.className = "releaf-touch-zone releaf-touch-zone-right";
     rightZone.onclick = goToNextPage;
-    
+
     touchZones.appendChild(leftZone);
     touchZones.appendChild(centerZone);
     touchZones.appendChild(rightZone);
@@ -253,51 +242,28 @@ function enableReleaf() {
     // Bottom Menu Bar
     const bottomMenu = document.createElement("div");
     bottomMenu.className = "releaf-bottom-menu";
-    
+
     // Clone buttons for bottom menu
     const menuThemeBtn = themeBtn.cloneNode(true);
     menuThemeBtn.onclick = themeBtn.onclick;
-    
+
     const menuDecreaseFontBtn = decreaseFontBtn.cloneNode(true);
     menuDecreaseFontBtn.onclick = decreaseFontBtn.onclick;
-    
+
     const menuIncreaseFontBtn = increaseFontBtn.cloneNode(true);
     menuIncreaseFontBtn.onclick = increaseFontBtn.onclick;
-    
+
     const menuCloseBtn = closeBtn.cloneNode(true);
     menuCloseBtn.onclick = toggleReleaf;
-    
+
     bottomMenu.appendChild(menuThemeBtn);
     bottomMenu.appendChild(menuDecreaseFontBtn);
     bottomMenu.appendChild(menuIncreaseFontBtn);
     bottomMenu.appendChild(menuCloseBtn);
 
-    // Old Nav Container (keeping for backwards compatibility but hidden by CSS when menu is visible)
-    const navContainer = document.createElement("div");
-    navContainer.className = "releaf-nav";
-
-    // Prev Button
-    const prevBtn = document.createElement("button");
-    prevBtn.className = "releaf-btn";
-    prevBtn.title = "Previous Page";
-    prevBtn.appendChild(createIcon(ICONS.prev));
-    prevBtn.onclick = goToPrevPage;
-
-    // Next Button
-    const nextBtn = document.createElement("button");
-    nextBtn.className = "releaf-btn";
-    nextBtn.title = "Next Page";
-    nextBtn.appendChild(createIcon(ICONS.next));
-    nextBtn.onclick = goToNextPage;
-
-    navContainer.appendChild(prevBtn);
-    navContainer.appendChild(nextBtn);
-
-    container.appendChild(header);
     container.appendChild(content);
     container.appendChild(touchZones);
     container.appendChild(bottomMenu);
-    container.appendChild(navContainer);
     document.body.appendChild(container);
 
     // Prevent background scrolling
