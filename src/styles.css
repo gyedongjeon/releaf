@@ -113,7 +113,7 @@
   margin-top: var(--releaf-margin-v);
   padding: 0 var(--releaf-margin-h);
 
-  /* CSS Columns for Pagination */
+  /* CSS Columns for Pagination - 1 page view (default) */
   column-fill: auto;
   column-width: calc(100vw - var(--releaf-margin-h) * 2);
   column-gap: calc(var(--releaf-margin-h) * 2);
@@ -126,6 +126,12 @@
   overflow-y: hidden;
 
   animation: releaf-fade-in 0.6s ease-out;
+}
+
+/* 2-page view mode */
+.releaf-2page .releaf-content {
+  column-width: calc((100vw - var(--releaf-margin-h) * 3) / 2);
+  column-gap: var(--releaf-margin-h);
 }
 
 /* Content Elements */
@@ -404,4 +410,34 @@
   background: #333333;
   cursor: pointer;
   border: none;
+}
+
+/* Page View Buttons */
+.releaf-page-view-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.releaf-page-view-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: transparent;
+  color: #333333;
+  font-family: var(--releaf-ui-font);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.releaf-page-view-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.releaf-page-view-btn.active {
+  background: #333333;
+  color: #ffffff;
+  border-color: #333333;
 }

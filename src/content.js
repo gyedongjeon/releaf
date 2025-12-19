@@ -312,6 +312,13 @@ function enableReleaf() {
             <span class="releaf-settings-label">↔️ Horizontal Margin</span>
             <input type="range" class="releaf-slider" id="releaf-margin-h" min="20" max="80" value="40">
         </div>
+        <div class="releaf-settings-row">
+            <span class="releaf-settings-label">📄 Page View</span>
+            <div class="releaf-page-view-btns">
+                <button class="releaf-page-view-btn active" data-pages="1">1</button>
+                <button class="releaf-page-view-btn" data-pages="2">2</button>
+            </div>
+        </div>
     `;
 
     // Wire up close button
@@ -367,6 +374,23 @@ function enableReleaf() {
     settingsPopup.querySelector('#releaf-margin-h').oninput = (e) => {
         container.style.setProperty('--releaf-margin-h', `${e.target.value}px`);
     };
+
+    // Wire up page view buttons
+    settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(btn => {
+        btn.onclick = () => {
+            // Update active state
+            settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Toggle 2-page mode
+            const pages = btn.dataset.pages;
+            if (pages === '2') {
+                container.classList.add('releaf-2page');
+            } else {
+                container.classList.remove('releaf-2page');
+            }
+        };
+    });
 
     // Add to bottom menu
     bottomMenu.appendChild(settingsBtn);
