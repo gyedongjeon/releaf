@@ -216,60 +216,44 @@ function enableReleaf() {
         container.classList.toggle('releaf-menu-visible');
     };
 
-    // Touch Zones Container
-    const touchZones = document.createElement("div");
-    touchZones.className = "releaf-touch-zones";
-
-    // Tap detection helper - distinguishes taps from drags (for text selection)
+    // Tap detection on container - determines zone based on x position
     const TAP_THRESHOLD = 10; // pixels - movement less than this is a tap
     const TAP_TIME_LIMIT = 300; // ms - tap must be faster than this
+    let tapStartX, tapStartY, tapStartTime;
 
-    const createTapHandler = (action) => {
-        let startX, startY, startTime;
+    container.addEventListener('mousedown', (e) => {
+        tapStartX = e.clientX;
+        tapStartY = e.clientY;
+        tapStartTime = Date.now();
+    });
 
-        return {
-            onMouseDown: (e) => {
-                startX = e.clientX;
-                startY = e.clientY;
-                startTime = Date.now();
-            },
-            onMouseUp: (e) => {
-                const deltaX = Math.abs(e.clientX - startX);
-                const deltaY = Math.abs(e.clientY - startY);
-                const deltaTime = Date.now() - startTime;
+    container.addEventListener('mouseup', (e) => {
+        // Skip if clicking on buttons
+        if (e.target.closest('.releaf-btn') || e.target.closest('.releaf-bottom-menu')) {
+            return;
+        }
 
-                // Only trigger action if it was a quick tap with minimal movement
-                if (deltaX < TAP_THRESHOLD && deltaY < TAP_THRESHOLD && deltaTime < TAP_TIME_LIMIT) {
-                    action();
-                }
+        const deltaX = Math.abs(e.clientX - tapStartX);
+        const deltaY = Math.abs(e.clientY - tapStartY);
+        const deltaTime = Date.now() - tapStartTime;
+
+        // Only trigger if it was a quick tap with minimal movement
+        if (deltaX < TAP_THRESHOLD && deltaY < TAP_THRESHOLD && deltaTime < TAP_TIME_LIMIT) {
+            const screenWidth = window.innerWidth;
+            const clickX = e.clientX;
+
+            if (clickX < screenWidth * 0.2) {
+                // Left 20% - Previous page
+                goToPrevPage();
+            } else if (clickX > screenWidth * 0.8) {
+                // Right 20% - Next page
+                goToNextPage();
+            } else {
+                // Center 60% - Toggle menu
+                toggleMenu();
             }
-        };
-    };
-
-    // Left zone (Previous page)
-    const leftZone = document.createElement("div");
-    leftZone.className = "releaf-touch-zone releaf-touch-zone-left";
-    const leftTapHandler = createTapHandler(goToPrevPage);
-    leftZone.onmousedown = leftTapHandler.onMouseDown;
-    leftZone.onmouseup = leftTapHandler.onMouseUp;
-
-    // Center zone (Toggle menu)
-    const centerZone = document.createElement("div");
-    centerZone.className = "releaf-touch-zone releaf-touch-zone-center";
-    const centerTapHandler = createTapHandler(toggleMenu);
-    centerZone.onmousedown = centerTapHandler.onMouseDown;
-    centerZone.onmouseup = centerTapHandler.onMouseUp;
-
-    // Right zone (Next page)
-    const rightZone = document.createElement("div");
-    rightZone.className = "releaf-touch-zone releaf-touch-zone-right";
-    const rightTapHandler = createTapHandler(goToNextPage);
-    rightZone.onmousedown = rightTapHandler.onMouseDown;
-    rightZone.onmouseup = rightTapHandler.onMouseUp;
-
-    touchZones.appendChild(leftZone);
-    touchZones.appendChild(centerZone);
-    touchZones.appendChild(rightZone);
+        }
+    });
 
     // Bottom Menu Bar
     const bottomMenu = document.createElement("div");
@@ -294,7 +278,6 @@ function enableReleaf() {
     bottomMenu.appendChild(menuCloseBtn);
 
     container.appendChild(content);
-    container.appendChild(touchZones);
     container.appendChild(bottomMenu);
     document.body.appendChild(container);
 

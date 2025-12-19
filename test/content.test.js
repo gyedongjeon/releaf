@@ -72,11 +72,6 @@ describe('Re:Leaf Content Script', () => {
         expect(buttonTitles).toContain('Increase Font Size');
         expect(buttonTitles).toContain('Close Reader View');
 
-        // Check for Touch Zones (ebook-style navigation)
-        const touchZones = container.querySelector('.releaf-touch-zones');
-        expect(touchZones).not.toBeNull();
-        expect(touchZones.children.length).toBe(3); // left, center, right
-
         // Check for Bottom Menu
         const bottomMenu = container.querySelector('.releaf-bottom-menu');
         expect(bottomMenu).not.toBeNull();
@@ -84,20 +79,23 @@ describe('Re:Leaf Content Script', () => {
         // Mock scrollTo for navigation tests
         content.scrollTo = jest.fn();
 
-        // Helper to simulate a tap (mousedown + mouseup at same position)
-        const simulateTap = (element) => {
-            const mousedown = new MouseEvent('mousedown', { clientX: 50, clientY: 50 });
-            const mouseup = new MouseEvent('mouseup', { clientX: 50, clientY: 50 });
-            element.dispatchEvent(mousedown);
-            element.dispatchEvent(mouseup);
+        // Mock window.innerWidth for zone detection
+        Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true });
+
+        // Helper to simulate a tap on container at specific x position
+        const simulateTap = (x) => {
+            const mousedown = new MouseEvent('mousedown', { clientX: x, clientY: 50, bubbles: true });
+            const mouseup = new MouseEvent('mouseup', { clientX: x, clientY: 50, bubbles: true });
+            container.dispatchEvent(mousedown);
+            container.dispatchEvent(mouseup);
         };
 
-        // Simulate left zone tap (previous page)
-        simulateTap(touchZones.querySelector('.releaf-touch-zone-left'));
+        // Simulate left zone tap (x < 20% = 200px)
+        simulateTap(100);
         expect(content.scrollTo).toHaveBeenCalled();
 
-        // Simulate right zone tap (next page)
-        simulateTap(touchZones.querySelector('.releaf-touch-zone-right'));
+        // Simulate right zone tap (x > 80% = 800px)
+        simulateTap(900);
         expect(content.scrollTo).toHaveBeenCalled();
 
         expect(document.body.style.overflow).toBe('hidden');
