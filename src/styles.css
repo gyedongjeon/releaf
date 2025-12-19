@@ -49,8 +49,9 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: var(--releaf-bg);
-  color: var(--releaf-text);
+  /* Use rgb() directly so inline style overrides work */
+  background-color: rgb(var(--releaf-bg-rgb));
+  color: rgb(var(--releaf-text-rgb));
   z-index: 2147483647;
   /* Max z-index */
   /* Disable vertical scroll */
