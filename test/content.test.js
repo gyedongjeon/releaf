@@ -65,16 +65,14 @@ describe('Re:Leaf Content Script', () => {
         const closeBtn = container.querySelector('.releaf-btn'); // Matches any button with this class
         expect(closeBtn).not.toBeNull();
 
-        // Use title matcher effectively
+        // Use title matcher effectively - bottom menu now only has Settings and Close
         const buttonTitles = Array.from(container.querySelectorAll('.releaf-btn')).map(b => b.title);
-        expect(buttonTitles).toContain('Toggle Theme');
-        expect(buttonTitles).toContain('Decrease Font Size');
-        expect(buttonTitles).toContain('Increase Font Size');
+        expect(buttonTitles).toContain('View Settings');
         expect(buttonTitles).toContain('Close Reader View');
 
-        // Check for Bottom Menu
-        const bottomMenu = container.querySelector('.releaf-bottom-menu');
-        expect(bottomMenu).not.toBeNull();
+        // Check for Settings Popup
+        const settingsPopup = container.querySelector('.releaf-settings-popup');
+        expect(settingsPopup).not.toBeNull();
 
         // Mock scrollTo for navigation tests
         content.scrollTo = jest.fn();

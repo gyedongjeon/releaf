@@ -259,25 +259,111 @@ function enableReleaf() {
     const bottomMenu = document.createElement("div");
     bottomMenu.className = "releaf-bottom-menu";
 
-    // Clone buttons for bottom menu
-    const menuThemeBtn = themeBtn.cloneNode(true);
-    menuThemeBtn.onclick = themeBtn.onclick;
+    // Settings state
+    let currentFontSizeValue = 20;
+    let currentLineHeight = 1.8;
+    let currentMarginV = 80;
+    let currentMarginH = 40;
 
-    const menuDecreaseFontBtn = decreaseFontBtn.cloneNode(true);
-    menuDecreaseFontBtn.onclick = decreaseFontBtn.onclick;
+    // Settings Button (Gear Icon)
+    const settingsBtn = document.createElement("button");
+    settingsBtn.className = "releaf-btn";
+    settingsBtn.title = "View Settings";
+    settingsBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>`;
 
-    const menuIncreaseFontBtn = increaseFontBtn.cloneNode(true);
-    menuIncreaseFontBtn.onclick = increaseFontBtn.onclick;
+    // Toggle settings popup
+    const toggleSettings = () => {
+        container.classList.toggle('releaf-settings-visible');
+    };
+    settingsBtn.onclick = toggleSettings;
 
-    const menuCloseBtn = closeBtn.cloneNode(true);
-    menuCloseBtn.onclick = toggleReleaf;
+    // Settings Popup
+    const settingsPopup = document.createElement("div");
+    settingsPopup.className = "releaf-settings-popup";
+    settingsPopup.innerHTML = `
+        <div class="releaf-settings-header">
+            <h3 class="releaf-settings-title">View Settings</h3>
+            <button class="releaf-settings-close">✕</button>
+        </div>
+        <div class="releaf-color-swatches">
+            <div class="releaf-color-swatch releaf-swatch-light active" data-theme="light"></div>
+            <div class="releaf-color-swatch releaf-swatch-cream" data-theme="sepia"></div>
+            <div class="releaf-color-swatch releaf-swatch-mint" data-theme="mint"></div>
+            <div class="releaf-color-swatch releaf-swatch-green" data-theme="forest"></div>
+            <div class="releaf-color-swatch releaf-swatch-gray" data-theme="gray"></div>
+            <div class="releaf-color-swatch releaf-swatch-dark" data-theme="dark"></div>
+        </div>
+        <div class="releaf-settings-row">
+            <span class="releaf-settings-label">📖 Text Size</span>
+            <input type="range" class="releaf-slider" id="releaf-font-size" min="14" max="32" value="20">
+        </div>
+        <div class="releaf-settings-row">
+            <span class="releaf-settings-label">📏 Line Spacing</span>
+            <input type="range" class="releaf-slider" id="releaf-line-height" min="12" max="24" value="18">
+        </div>
+        <div class="releaf-settings-row">
+            <span class="releaf-settings-label">↕️ Vertical Margin</span>
+            <input type="range" class="releaf-slider" id="releaf-margin-v" min="40" max="120" value="80">
+        </div>
+        <div class="releaf-settings-row">
+            <span class="releaf-settings-label">↔️ Horizontal Margin</span>
+            <input type="range" class="releaf-slider" id="releaf-margin-h" min="20" max="80" value="40">
+        </div>
+    `;
 
-    bottomMenu.appendChild(menuThemeBtn);
-    bottomMenu.appendChild(menuDecreaseFontBtn);
-    bottomMenu.appendChild(menuIncreaseFontBtn);
-    bottomMenu.appendChild(menuCloseBtn);
+    // Wire up close button
+    settingsPopup.querySelector('.releaf-settings-close').onclick = toggleSettings;
+
+    // Wire up color swatches
+    const themeColors = {
+        light: { bg: '255, 255, 255', text: '34, 34, 34', accent: '234, 234, 234' },
+        sepia: { bg: '252, 246, 229', text: '74, 60, 49', accent: '234, 221, 207' },
+        mint: { bg: '232, 245, 233', text: '46, 80, 54', accent: '200, 230, 201' },
+        forest: { bg: '21, 128, 61', text: '236, 253, 245', accent: '22, 101, 52' },
+        gray: { bg: '107, 114, 128', text: '243, 244, 246', accent: '75, 85, 99' },
+        dark: { bg: '26, 26, 26', text: '212, 212, 212', accent: '51, 51, 51' }
+    };
+
+    settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(swatch => {
+        swatch.onclick = () => {
+            // Remove active from all
+            settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
+            swatch.classList.add('active');
+
+            const theme = swatch.dataset.theme;
+            const colors = themeColors[theme];
+            container.style.setProperty('--releaf-bg-rgb', colors.bg);
+            container.style.setProperty('--releaf-text-rgb', colors.text);
+            container.style.setProperty('--releaf-accent-rgb', colors.accent);
+        };
+    });
+
+    // Wire up sliders
+    settingsPopup.querySelector('#releaf-font-size').oninput = (e) => {
+        container.style.setProperty('--releaf-font-size', `${e.target.value}px`);
+    };
+
+    settingsPopup.querySelector('#releaf-line-height').oninput = (e) => {
+        container.style.setProperty('--releaf-line-height', (e.target.value / 10).toFixed(1));
+    };
+
+    settingsPopup.querySelector('#releaf-margin-v').oninput = (e) => {
+        container.style.setProperty('--releaf-margin-v', `${e.target.value}px`);
+    };
+
+    settingsPopup.querySelector('#releaf-margin-h').oninput = (e) => {
+        container.style.setProperty('--releaf-margin-h', `${e.target.value}px`);
+    };
+
+    // Add to bottom menu
+    bottomMenu.appendChild(settingsBtn);
+    bottomMenu.appendChild(closeBtn);
 
     container.appendChild(content);
+    container.appendChild(settingsPopup);
     container.appendChild(bottomMenu);
     document.body.appendChild(container);
 

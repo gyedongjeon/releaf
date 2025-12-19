@@ -14,6 +14,9 @@
   --releaf-font: "Merriweather", "Georgia", serif;
   --releaf-ui-font: "Inter", sans-serif;
   --releaf-font-size: 20px;
+  --releaf-line-height: 1.8;
+  --releaf-margin-v: 80px;
+  --releaf-margin-h: 40px;
 
   /* Derived colors */
   --releaf-bg: rgb(var(--releaf-bg-rgb));
@@ -105,25 +108,20 @@
 
 /* Pagination Content */
 .releaf-content {
-  /* Calculated height: 100vh - header(60px) - bottom_nav_space(60px) - top_margin(80px) */
-  /* We need to ensure columns stop before they hit the buttons at bottom: 20px */
-  /* Let's reserve ~80px at the bottom. */
-  height: calc(100vh - 160px);
-  margin-top: 80px;
-  /* Space for fixed header */
-  padding: 0 40px;
+  height: calc(100vh - var(--releaf-margin-v) * 2);
+  margin-top: var(--releaf-margin-v);
+  padding: 0 var(--releaf-margin-h);
 
   /* CSS Columns for Pagination */
   column-fill: auto;
-  column-width: calc(100vw - 80px);
-  /* Viewport width - padding */
-  column-gap: 80px;
+  column-width: calc(100vw - var(--releaf-margin-h) * 2);
+  column-gap: calc(var(--releaf-margin-h) * 2);
 
   font-size: var(--releaf-font-size);
+  line-height: var(--releaf-line-height);
 
   /* Horizontal scrolling for pages */
   overflow-x: hidden;
-  /* Hidden because we scroll programmatically */
   overflow-y: hidden;
 
   animation: releaf-fade-in 0.6s ease-out;
@@ -231,4 +229,175 @@
   font-size: 14px;
   color: var(--releaf-text);
   opacity: 0.6;
+}
+
+/* Settings Popup */
+.releaf-settings-popup {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+
+  /* Glass effect */
+  background-color: rgba(var(--releaf-bg-rgb), 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--releaf-text-rgb), 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+
+  padding: 20px;
+  z-index: 25;
+
+  /* Hidden by default */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.releaf-settings-visible .releaf-settings-popup {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Settings Header */
+.releaf-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(var(--releaf-text-rgb), 0.1);
+}
+
+.releaf-settings-title {
+  font-family: var(--releaf-ui-font);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--releaf-text);
+  margin: 0;
+}
+
+.releaf-settings-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--releaf-text);
+  opacity: 0.6;
+  padding: 4px;
+}
+
+.releaf-settings-close:hover {
+  opacity: 1;
+}
+
+/* Color Swatches */
+.releaf-color-swatches {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.releaf-color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.releaf-color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.releaf-color-swatch.active {
+  border-color: var(--releaf-text);
+}
+
+.releaf-swatch-light {
+  background-color: #ffffff;
+  border-color: #e0e0e0;
+}
+
+.releaf-swatch-cream {
+  background-color: #fcf6e5;
+}
+
+.releaf-swatch-mint {
+  background-color: #e8f5e9;
+}
+
+.releaf-swatch-green {
+  background-color: #15803d;
+}
+
+.releaf-swatch-gray {
+  background-color: #6b7280;
+}
+
+.releaf-swatch-dark {
+  background-color: #1a1a1a;
+}
+
+/* Settings Row */
+.releaf-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.releaf-settings-label {
+  font-family: var(--releaf-ui-font);
+  font-size: 14px;
+  color: var(--releaf-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.releaf-settings-label svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+}
+
+/* Slider */
+.releaf-slider {
+  width: 140px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(var(--releaf-text-rgb), 0.2);
+  border-radius: 2px;
+  outline: none;
+}
+
+.releaf-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--releaf-text);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.releaf-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.releaf-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--releaf-text);
+  cursor: pointer;
+  border: none;
 }
