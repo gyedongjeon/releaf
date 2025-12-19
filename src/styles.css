@@ -1,30 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap');
+
 /* Re:Leaf Styles */
 
 :root {
-  --releaf-bg: #fcf6e5;
-  --releaf-text: #333333;
-  --releaf-accent: #5e4b35;
-  --releaf-font: "Georgia", "Times New Roman", serif;
+  /* RGB values for transparency support */
+  --releaf-bg-rgb: 252, 246, 229;
+  /* #fcf6e5 */
+  --releaf-text-rgb: 51, 51, 51;
+  /* #333333 */
+  --releaf-accent-rgb: 94, 75, 53;
+  /* #5e4b35 */
+
+  --releaf-font: "Merriweather", "Georgia", serif;
+  --releaf-ui-font: "Inter", sans-serif;
   --releaf-font-size: 20px;
+
+  /* Derived colors */
+  --releaf-bg: rgb(var(--releaf-bg-rgb));
+  --releaf-text: rgb(var(--releaf-text-rgb));
+  --releaf-accent: rgb(var(--releaf-accent-rgb));
 }
 
 /* Themes */
 .releaf-theme-light {
-  --releaf-bg: #ffffff;
-  --releaf-text: #222222;
-  --releaf-accent: #eaeaea;
+  --releaf-bg-rgb: 255, 255, 255;
+  --releaf-text-rgb: 34, 34, 34;
+  --releaf-accent-rgb: 234, 234, 234;
 }
 
 .releaf-theme-sepia {
-  --releaf-bg: #fcf6e5;
-  --releaf-text: #4a3c31;
-  --releaf-accent: #eaddcf;
+  --releaf-bg-rgb: 252, 246, 229;
+  --releaf-text-rgb: 74, 60, 49;
+  --releaf-accent-rgb: 234, 221, 207;
 }
 
 .releaf-theme-dark {
-  --releaf-bg: #1a1a1a;
-  --releaf-text: #d4d4d4;
-  --releaf-accent: #333333;
+  --releaf-bg-rgb: 26, 26, 26;
+  --releaf-text-rgb: 212, 212, 212;
+  --releaf-accent-rgb: 51, 51, 51;
 }
 
 #releaf-container {
@@ -46,40 +59,75 @@
   transition: background-color 0.3s, color 0.3s;
 }
 
-/* Top Bar */
+/* UI Animation */
+@keyframes releaf-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Top Bar - Glassmorphism */
 .releaf-header {
   position: fixed;
-  /* Fixed to stay on top */
   top: 0;
   left: 0;
   width: 100%;
-  height: 60px;
-  background-color: var(--releaf-bg);
+  height: 64px;
+
+  /* Glass effect */
+  background-color: rgba(var(--releaf-bg-rgb), 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(var(--releaf-text-rgb), 0.1);
+
   padding: 0 40px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 15px;
-  border-bottom: 1px solid var(--releaf-accent);
-  transition: background-color 0.3s, border-color 0.3s;
+  gap: 12px;
+
   z-index: 10;
   box-sizing: border-box;
+  transition: all 0.3s ease;
+
+  animation: releaf-fade-in 0.4s ease-out;
 }
 
 .releaf-btn {
-  background: none;
-  border: 1px solid var(--releaf-text);
+  background: transparent;
+  border: 1px solid rgba(var(--releaf-text-rgb), 0.2);
   color: var(--releaf-text);
-  padding: 5px 10px;
+  padding: 6px 14px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 20px;
+  /* Pill shape */
   font-size: 14px;
-  font-family: sans-serif;
-  opacity: 0.7;
+  font-weight: 500;
+  font-family: var(--releaf-ui-font);
+  transition: all 0.2s ease;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0.8;
 }
 
 .releaf-btn:hover {
   opacity: 1;
+  background-color: rgba(var(--releaf-text-rgb), 0.05);
+  border-color: rgba(var(--releaf-text-rgb), 0.4);
+  transform: translateY(-1px);
+}
+
+.releaf-btn:active {
+  transform: translateY(0);
 }
 
 /* Pagination Content */
@@ -104,6 +152,8 @@
   overflow-x: hidden;
   /* Hidden because we scroll programmatically */
   overflow-y: hidden;
+
+  animation: releaf-fade-in 0.6s ease-out;
 }
 
 /* Navigation Controls Overlay */

@@ -119,10 +119,34 @@ function enableReleaf() {
     const header = document.createElement("div");
     header.className = "releaf-header";
 
+    // Helper to create SVG icons
+    const createIcon = (svgPath) => {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", "20");
+        svg.setAttribute("height", "20");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "2");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        svg.innerHTML = svgPath;
+        return svg;
+    };
+
+    // Icons path data
+    const ICONS = {
+        theme: '<circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>', // Sun
+        close: '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>', // X
+        prev: '<polyline points="15 18 9 12 15 6"></polyline>', // Chevron Left
+        next: '<polyline points="9 18 15 12 9 6"></polyline>' // Chevron Right
+    };
+
     // Theme Toggle Button
     const themeBtn = document.createElement("button");
     themeBtn.className = "releaf-btn";
-    themeBtn.textContent = "Theme"; // textContent is safer for JSDOM
+    themeBtn.title = "Toggle Theme";
+    themeBtn.appendChild(createIcon(ICONS.theme));
     themeBtn.onclick = () => {
         const current = container.className;
         if (current.includes("theme-light")) {
@@ -141,7 +165,8 @@ function enableReleaf() {
 
     const decreaseFontBtn = document.createElement("button");
     decreaseFontBtn.className = "releaf-btn";
-    decreaseFontBtn.textContent = "A-";
+    decreaseFontBtn.title = "Decrease Font Size";
+    decreaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold;">A-</span>'; // Keep A- as text for clarity
     decreaseFontBtn.onclick = () => {
         if (currentFontSize > minFontSize) {
             currentFontSize -= 2;
@@ -151,7 +176,8 @@ function enableReleaf() {
 
     const increaseFontBtn = document.createElement("button");
     increaseFontBtn.className = "releaf-btn";
-    increaseFontBtn.textContent = "A+";
+    increaseFontBtn.title = "Increase Font Size";
+    increaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold; font-size: 1.2em;">A+</span>'; // Keep A+ as text
     increaseFontBtn.onclick = () => {
         if (currentFontSize < maxFontSize) {
             currentFontSize += 2;
@@ -162,7 +188,8 @@ function enableReleaf() {
     // Close Button
     const closeBtn = document.createElement("button");
     closeBtn.className = "releaf-btn";
-    closeBtn.textContent = "Close"; // textContent is safer for JSDOM
+    closeBtn.title = "Close Reader View";
+    closeBtn.appendChild(createIcon(ICONS.close));
     closeBtn.onclick = toggleReleaf;
 
     header.appendChild(themeBtn);
@@ -184,7 +211,8 @@ function enableReleaf() {
     // Prev Button
     const prevBtn = document.createElement("button");
     prevBtn.className = "releaf-btn";
-    prevBtn.textContent = "← Prev";
+    prevBtn.title = "Previous Page";
+    prevBtn.appendChild(createIcon(ICONS.prev));
     prevBtn.onclick = () => {
         const pageWidth = getPageWidth();
         const currentScroll = content.scrollLeft;
@@ -196,7 +224,8 @@ function enableReleaf() {
     // Next Button
     const nextBtn = document.createElement("button");
     nextBtn.className = "releaf-btn";
-    nextBtn.textContent = "Next →";
+    nextBtn.title = "Next Page";
+    nextBtn.appendChild(createIcon(ICONS.next));
     nextBtn.onclick = () => {
         const pageWidth = getPageWidth();
         const currentScroll = content.scrollLeft;
