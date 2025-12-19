@@ -129,9 +129,11 @@
 }
 
 /* 2-page view mode */
+/* For proper alignment: 2 * column-width + gap = 100vw (scroll distance) */
+/* Column width = (100vw - gap) / 2, using same gap as 1-page mode */
 .releaf-2page .releaf-content {
-  column-width: calc((100vw - var(--releaf-margin-h) * 3) / 2);
-  column-gap: var(--releaf-margin-h);
+  column-width: calc((100vw - var(--releaf-margin-h) * 2) / 2);
+  column-gap: calc(var(--releaf-margin-h) * 2);
 }
 
 /* Content Elements */
