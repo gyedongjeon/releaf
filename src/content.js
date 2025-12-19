@@ -206,46 +206,97 @@ function enableReleaf() {
     content.className = "releaf-content";
     content.innerHTML = contentHtml;
 
-    // Nav Container
+    // Navigation functions (used by touch zones and keyboard)
+    const getPageWidth = () => window.innerWidth;
+    
+    const goToPrevPage = () => {
+        const pageWidth = getPageWidth();
+        const currentScroll = content.scrollLeft;
+        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
+        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+    };
+    
+    const goToNextPage = () => {
+        const pageWidth = getPageWidth();
+        const currentScroll = content.scrollLeft;
+        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
+        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+    };
+    
+    const toggleMenu = () => {
+        container.classList.toggle('releaf-menu-visible');
+    };
+
+    // Touch Zones Container
+    const touchZones = document.createElement("div");
+    touchZones.className = "releaf-touch-zones";
+    
+    // Left zone (Previous page)
+    const leftZone = document.createElement("div");
+    leftZone.className = "releaf-touch-zone releaf-touch-zone-left";
+    leftZone.onclick = goToPrevPage;
+    
+    // Center zone (Toggle menu)
+    const centerZone = document.createElement("div");
+    centerZone.className = "releaf-touch-zone releaf-touch-zone-center";
+    centerZone.onclick = toggleMenu;
+    
+    // Right zone (Next page)
+    const rightZone = document.createElement("div");
+    rightZone.className = "releaf-touch-zone releaf-touch-zone-right";
+    rightZone.onclick = goToNextPage;
+    
+    touchZones.appendChild(leftZone);
+    touchZones.appendChild(centerZone);
+    touchZones.appendChild(rightZone);
+
+    // Bottom Menu Bar
+    const bottomMenu = document.createElement("div");
+    bottomMenu.className = "releaf-bottom-menu";
+    
+    // Clone buttons for bottom menu
+    const menuThemeBtn = themeBtn.cloneNode(true);
+    menuThemeBtn.onclick = themeBtn.onclick;
+    
+    const menuDecreaseFontBtn = decreaseFontBtn.cloneNode(true);
+    menuDecreaseFontBtn.onclick = decreaseFontBtn.onclick;
+    
+    const menuIncreaseFontBtn = increaseFontBtn.cloneNode(true);
+    menuIncreaseFontBtn.onclick = increaseFontBtn.onclick;
+    
+    const menuCloseBtn = closeBtn.cloneNode(true);
+    menuCloseBtn.onclick = toggleReleaf;
+    
+    bottomMenu.appendChild(menuThemeBtn);
+    bottomMenu.appendChild(menuDecreaseFontBtn);
+    bottomMenu.appendChild(menuIncreaseFontBtn);
+    bottomMenu.appendChild(menuCloseBtn);
+
+    // Old Nav Container (keeping for backwards compatibility but hidden by CSS when menu is visible)
     const navContainer = document.createElement("div");
     navContainer.className = "releaf-nav";
-
-    const getPageWidth = () => window.innerWidth; // Since columns + gap = 100vw
 
     // Prev Button
     const prevBtn = document.createElement("button");
     prevBtn.className = "releaf-btn";
     prevBtn.title = "Previous Page";
     prevBtn.appendChild(createIcon(ICONS.prev));
-    prevBtn.onclick = () => {
-        const pageWidth = getPageWidth();
-        const currentScroll = content.scrollLeft;
-        // Snap to previous page
-        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
-    };
+    prevBtn.onclick = goToPrevPage;
 
     // Next Button
     const nextBtn = document.createElement("button");
     nextBtn.className = "releaf-btn";
     nextBtn.title = "Next Page";
     nextBtn.appendChild(createIcon(ICONS.next));
-    nextBtn.onclick = () => {
-        const pageWidth = getPageWidth();
-        const currentScroll = content.scrollLeft;
-        // Snap to next page
-        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
-    };
-
-    // Resize Support
-    window.addEventListener('resize', handleResize);
+    nextBtn.onclick = goToNextPage;
 
     navContainer.appendChild(prevBtn);
     navContainer.appendChild(nextBtn);
 
     container.appendChild(header);
     container.appendChild(content);
+    container.appendChild(touchZones);
+    container.appendChild(bottomMenu);
     container.appendChild(navContainer);
     document.body.appendChild(container);
 
