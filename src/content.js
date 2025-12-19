@@ -317,6 +317,16 @@ function enableReleaf() {
     // Wire up close button
     settingsPopup.querySelector('.releaf-settings-close').onclick = toggleSettings;
 
+    // Close popup when clicking outside
+    container.addEventListener('click', (e) => {
+        if (container.classList.contains('releaf-settings-visible')) {
+            // Check if click is outside the popup and not on the settings button
+            if (!settingsPopup.contains(e.target) && !settingsBtn.contains(e.target)) {
+                container.classList.remove('releaf-settings-visible');
+            }
+        }
+    });
+
     // Wire up color swatches
     const themeColors = {
         light: { bg: '255, 255, 255', text: '34, 34, 34', accent: '234, 234, 234' },
