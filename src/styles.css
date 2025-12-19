@@ -241,13 +241,16 @@
   max-height: 400px;
   overflow-y: auto;
 
-  /* Glass effect */
-  background-color: rgba(var(--releaf-bg-rgb), 0.95);
+  /* Fixed light background for readability */
+  background-color: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(var(--releaf-text-rgb), 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+
+  /* Fixed dark text for readability */
+  color: #333333;
 
   padding: 20px;
   z-index: 25;
@@ -278,7 +281,7 @@
   font-family: var(--releaf-ui-font);
   font-size: 16px;
   font-weight: 600;
-  color: var(--releaf-text);
+  color: #333333;
   margin: 0;
 }
 
@@ -286,7 +289,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--releaf-text);
+  color: #333333;
   opacity: 0.6;
   padding: 4px;
 }
@@ -317,7 +320,7 @@
 }
 
 .releaf-color-swatch.active {
-  border-color: var(--releaf-text);
+  border-color: #333333;
 }
 
 .releaf-swatch-light {
@@ -356,7 +359,7 @@
 .releaf-settings-label {
   font-family: var(--releaf-ui-font);
   font-size: 14px;
-  color: var(--releaf-text);
+  color: #333333;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -374,7 +377,7 @@
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(var(--releaf-text-rgb), 0.2);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 2px;
   outline: none;
 }
@@ -384,7 +387,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--releaf-text);
+  background: #333333;
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -397,7 +400,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--releaf-text);
+  background: #333333;
   cursor: pointer;
   border: none;
 }
