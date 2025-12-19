@@ -192,12 +192,16 @@
   height: 100%;
   z-index: 5;
   display: flex;
+  /* Allow pointer events but don't block text selection */
   pointer-events: auto;
 }
 
 .releaf-touch-zone {
   height: 100%;
   cursor: pointer;
+  /* Prevent the zones themselves from being "selected" */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .releaf-touch-zone-left {

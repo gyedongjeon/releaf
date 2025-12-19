@@ -220,20 +220,52 @@ function enableReleaf() {
     const touchZones = document.createElement("div");
     touchZones.className = "releaf-touch-zones";
 
+    // Tap detection helper - distinguishes taps from drags (for text selection)
+    const TAP_THRESHOLD = 10; // pixels - movement less than this is a tap
+    const TAP_TIME_LIMIT = 300; // ms - tap must be faster than this
+
+    const createTapHandler = (action) => {
+        let startX, startY, startTime;
+
+        return {
+            onMouseDown: (e) => {
+                startX = e.clientX;
+                startY = e.clientY;
+                startTime = Date.now();
+            },
+            onMouseUp: (e) => {
+                const deltaX = Math.abs(e.clientX - startX);
+                const deltaY = Math.abs(e.clientY - startY);
+                const deltaTime = Date.now() - startTime;
+
+                // Only trigger action if it was a quick tap with minimal movement
+                if (deltaX < TAP_THRESHOLD && deltaY < TAP_THRESHOLD && deltaTime < TAP_TIME_LIMIT) {
+                    action();
+                }
+            }
+        };
+    };
+
     // Left zone (Previous page)
     const leftZone = document.createElement("div");
     leftZone.className = "releaf-touch-zone releaf-touch-zone-left";
-    leftZone.onclick = goToPrevPage;
+    const leftTapHandler = createTapHandler(goToPrevPage);
+    leftZone.onmousedown = leftTapHandler.onMouseDown;
+    leftZone.onmouseup = leftTapHandler.onMouseUp;
 
     // Center zone (Toggle menu)
     const centerZone = document.createElement("div");
     centerZone.className = "releaf-touch-zone releaf-touch-zone-center";
-    centerZone.onclick = toggleMenu;
+    const centerTapHandler = createTapHandler(toggleMenu);
+    centerZone.onmousedown = centerTapHandler.onMouseDown;
+    centerZone.onmouseup = centerTapHandler.onMouseUp;
 
     // Right zone (Next page)
     const rightZone = document.createElement("div");
     rightZone.className = "releaf-touch-zone releaf-touch-zone-right";
-    rightZone.onclick = goToNextPage;
+    const rightTapHandler = createTapHandler(goToNextPage);
+    rightZone.onmousedown = rightTapHandler.onMouseDown;
+    rightZone.onmouseup = rightTapHandler.onMouseUp;
 
     touchZones.appendChild(leftZone);
     touchZones.appendChild(centerZone);

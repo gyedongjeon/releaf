@@ -84,12 +84,20 @@ describe('Re:Leaf Content Script', () => {
         // Mock scrollTo for navigation tests
         content.scrollTo = jest.fn();
 
-        // Simulate left zone click (previous page)
-        touchZones.querySelector('.releaf-touch-zone-left').click();
+        // Helper to simulate a tap (mousedown + mouseup at same position)
+        const simulateTap = (element) => {
+            const mousedown = new MouseEvent('mousedown', { clientX: 50, clientY: 50 });
+            const mouseup = new MouseEvent('mouseup', { clientX: 50, clientY: 50 });
+            element.dispatchEvent(mousedown);
+            element.dispatchEvent(mouseup);
+        };
+
+        // Simulate left zone tap (previous page)
+        simulateTap(touchZones.querySelector('.releaf-touch-zone-left'));
         expect(content.scrollTo).toHaveBeenCalled();
 
-        // Simulate right zone click (next page)
-        touchZones.querySelector('.releaf-touch-zone-right').click();
+        // Simulate right zone tap (next page)
+        simulateTap(touchZones.querySelector('.releaf-touch-zone-right'));
         expect(content.scrollTo).toHaveBeenCalled();
 
         expect(document.body.style.overflow).toBe('hidden');
