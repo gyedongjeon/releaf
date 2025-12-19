@@ -110,4 +110,28 @@ describe('Re:Leaf Content Script', () => {
 
         expect(document.getElementById('releaf-container')).not.toBeNull();
     });
+
+    test('Immersive mode hides UI after inactivity', () => {
+        jest.useFakeTimers();
+        document.body.innerHTML = '<p>Test content for immersive mode</p>';
+        enableReleaf();
+        const container = document.getElementById('releaf-container');
+
+        // Initially visible
+        expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+        // Fast-forward time
+        jest.advanceTimersByTime(3000);
+
+        // Should be hidden
+        expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
+
+        // Simulate activity (mousemove)
+        document.dispatchEvent(new Event('mousemove'));
+
+        // Should be visible again
+        expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+        jest.useRealTimers();
+    });
 });

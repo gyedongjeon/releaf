@@ -22,8 +22,12 @@ function toggleReleaf() {
     if (existingContainer) {
         // If active, remove it (restore original view)
         // Remove listeners
-        document.removeEventListener('keydown', handleKeyNavigation);
+        document.removeEventListener('mousemove', handleUserActivity);
+        document.removeEventListener('keydown', handleUserActivity);
         window.removeEventListener('resize', handleResize);
+        clearTimeout(idleTimer);
+        existingContainer.remove();
+        document.body.style.overflow = ""; // Restore scrolling
         existingContainer.remove();
         document.body.style.overflow = ""; // Restore scrolling
     } else {
@@ -234,9 +238,6 @@ function enableReleaf() {
         content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
     };
 
-    // Keyboard Support
-    document.addEventListener('keydown', handleKeyNavigation);
-
     // Resize Support
     window.addEventListener('resize', handleResize);
 
@@ -250,7 +251,42 @@ function enableReleaf() {
 
     // Prevent background scrolling
     document.body.style.overflow = "hidden";
+
+    // Start Immersive Mode Timer
+    resetIdleTimer();
+
+    // Add Immersive Mode Listeners
+    document.addEventListener('mousemove', handleUserActivity);
+    document.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('resize', handleResize);
 }
+
+let idleTimer;
+const IDLE_TIMEOUT = 3000; // 3 seconds
+
+function resetIdleTimer() {
+    const container = document.getElementById(RELEAF_Container_ID);
+    if (!container) return;
+
+    // Show UI
+    container.classList.remove('releaf-ui-hidden');
+
+    // Reset Timer
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+        container.classList.add('releaf-ui-hidden');
+    }, IDLE_TIMEOUT);
+}
+
+// Activity Listeners for Immersive Mode
+function handleUserActivity(e) {
+    resetIdleTimer();
+    if (e.type === 'keydown') {
+        handleKeyNavigation(e);
+    }
+}
+
+// Listeners are now added in enableReleaf and removed in toggleReleaf
 
 let resizeTimeout;
 function handleResize() {
