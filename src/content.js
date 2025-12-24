@@ -196,7 +196,8 @@ function enableReleaf() {
     content.innerHTML = contentHtml;
 
     // Navigation functions (used by touch zones and keyboard)
-    const getPageWidth = () => window.innerWidth;
+    // Use content.clientWidth for scroll distance - this matches the column layout
+    const getPageWidth = () => content.clientWidth + 60; // clientWidth + gap
 
     const goToPrevPage = () => {
         const pageWidth = getPageWidth();
