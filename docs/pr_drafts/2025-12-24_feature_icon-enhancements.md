@@ -9,8 +9,9 @@ This PR modernizes the UI by replacing emoji icons with custom, premium SVG icon
 ## Technical Changes
 - **SVG Icons:**
   - Replaced emojis (📖 📏 ↕️ ↔️ 📄) in the Settings Popup with inline SVG icons.
+  - **Page View Icons:** specialized geometric icons for 1-Page (single rectangle) and 2-Page (split pane with single center line) for a clean, abstract look.
   - Replaced "Gear" and "Close" buttons with cleaner SVG paths.
-  - Standardized icon size and stroke width.
+  - Standardized icon size and stroke width (1.5px for elegance).
 - **Animations:**
   - Added scale transform on hover/active states for all interaction buttons.
   - Added rotation animation for the Settings gear icon on hover.
