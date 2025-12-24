@@ -404,8 +404,44 @@ function enableReleaf() {
         };
     });
 
-    // Add to bottom menu
+    // Page Counter
+    const pageCounter = document.createElement("div");
+    pageCounter.className = "releaf-page-counter";
+    pageCounter.textContent = "1 / 1"; // Initial state
+
+    // Update page counter function
+    const updatePageCount = () => {
+        const pageWidth = getPageWidth();
+        const totalWidth = content.scrollWidth;
+        const currentScroll = content.scrollLeft;
+
+        // Calculate pages (add small buffer for rounding errors)
+        const totalPages = Math.max(1, Math.ceil((totalWidth - 10) / pageWidth));
+        const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentScroll + 10) / pageWidth) + 1));
+
+        pageCounter.textContent = `${currentPage} / ${totalPages}`;
+
+        // Update range input if we had a progress slider
+        // But for now just text
+    };
+
+    // Update on scroll and resize
+    content.addEventListener('scroll', () => {
+        // Debounce slightly for performance? No need for simple text update
+        window.requestAnimationFrame(updatePageCount);
+    });
+    window.addEventListener('resize', updatePageCount);
+
+    // Also update when settings change (font size, margins etc)
+    const observer = new MutationObserver(updatePageCount);
+    observer.observe(container, { attributes: true, attributeFilter: ['style', 'class'] });
+
+    // Initial update after layout
+    setTimeout(updatePageCount, 100);
+
+    // Add to bottom menu (Order: Settings | Counter | Close)
     bottomMenu.appendChild(settingsBtn);
+    bottomMenu.appendChild(pageCounter);
     bottomMenu.appendChild(closeBtn);
 
     container.appendChild(content);

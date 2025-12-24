@@ -226,6 +226,18 @@
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+.releaf-page-counter {
+  font-family: var(--releaf-ui-font);
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  min-width: 60px;
+  text-align: center;
+}
+
 /* Show menu when active */
 .releaf-menu-visible .releaf-bottom-menu {
   opacity: 1;
