@@ -1,0 +1,13 @@
+<svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Padded Concept: 80% scale centered, providing natural transparent padding -->
+  <g transform="translate(51, 51) scale(0.8)">
+    <!-- The Page (Background) -->
+    <rect x="0" y="0" width="512" height="512" rx="100" fill="#15803d"/> <!-- Forest Green Page -->
+    
+    <!-- The Fold (White/Light Green) -->
+    <path d="M512 0 L256 0 L512 256 Z" fill="#dcfce7"/>
+    
+    <!-- Shadow -->
+    <path d="M256 0 L512 256 L256 256 Z" fill="black" opacity="0.1"/>
+  </g>
+</svg>
