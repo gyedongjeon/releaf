@@ -69,6 +69,8 @@ function extractContent() {
     const unwantedSelectors = [
         'script', 'style', 'noscript', 'iframe', 'form', 'button', 'input', 'textarea',
         'nav', 'footer', 'header', 'aside',
+        'video', 'audio', 'canvas', 'object', 'embed', 'map',
+        '[data-component="video-block"]', '[data-component="ad-slot"]',
         '[role="banner"]', '[role="navigation"]', '[role="complementary"]', '[role="search"]',
         '.sidebar', '#sidebar', '.menu', '#menu', '.nav', '.navigation', '.toc', '#toc',
         '.language-list', '.interlanguage-link', '#p-lang',
