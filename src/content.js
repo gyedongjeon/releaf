@@ -315,23 +315,38 @@ function enableReleaf() {
             <div class="releaf-color-swatch releaf-swatch-dark" data-theme="dark"></div>
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">📖 Text Size</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+                Text Size
+            </span>
             <input type="range" class="releaf-slider" id="releaf-font-size" min="14" max="32" value="20">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">📏 Line Spacing</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M21 18H3"/></svg>
+                Line Spacing
+            </span>
             <input type="range" class="releaf-slider" id="releaf-line-height" min="12" max="24" value="18">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">↕️ Vertical Margin</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m8 7 4-4 4 4"/><path d="m8 17 4 4 4-4"/></svg>
+                Vertical Margin
+            </span>
             <input type="range" class="releaf-slider" id="releaf-margin-v" min="40" max="120" value="80">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">↔️ Horizontal Margin</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/></svg>
+                Horizontal Margin
+            </span>
             <input type="range" class="releaf-slider" id="releaf-margin-h" min="20" max="80" value="40">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">📄 Page View</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="15" y1="3" y2="3"/><line x1="9" x2="15" y1="21" y2="21"/></svg>
+                Page View
+            </span>
             <div class="releaf-page-view-btns">
                 <button class="releaf-page-view-btn active" data-pages="1">1</button>
                 <button class="releaf-page-view-btn" data-pages="2">2</button>

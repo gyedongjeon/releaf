@@ -444,6 +444,10 @@
 }
 
 .releaf-settings-label svg {
+  opacity: 0.6;
+}
+
+.releaf-settings-label svg {
   width: 18px;
   height: 18px;
   opacity: 0.6;
