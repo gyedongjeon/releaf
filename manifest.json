@@ -8,7 +8,17 @@
     "scripting"
   ],
   "action": {
-    "default_title": "Toggle Re:Leaf"
+    "default_title": "Toggle Re:Leaf",
+    "default_icon": {
+      "16": "src/assets/logo.png",
+      "48": "src/assets/logo.png",
+      "128": "src/assets/logo.png"
+    }
+  },
+  "icons": {
+    "16": "src/assets/logo.png",
+    "48": "src/assets/logo.png",
+    "128": "src/assets/logo.png"
   },
   "background": {
     "service_worker": "src/background.js"

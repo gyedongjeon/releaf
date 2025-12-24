@@ -65,26 +65,35 @@ describe('Re:Leaf Content Script', () => {
         const closeBtn = container.querySelector('.releaf-btn'); // Matches any button with this class
         expect(closeBtn).not.toBeNull();
 
-        // Use textContent matcher effectively
-        const buttons = Array.from(container.querySelectorAll('.releaf-btn')).map(b => b.textContent);
-        expect(buttons).toContain('Theme');
-        expect(buttons).toContain('A-');
-        expect(buttons).toContain('A+');
-        expect(buttons).toContain('Close');
+        // Use title matcher effectively - bottom menu now only has Settings and Close
+        const buttonTitles = Array.from(container.querySelectorAll('.releaf-btn')).map(b => b.title);
+        expect(buttonTitles).toContain('View Settings');
+        expect(buttonTitles).toContain('Close Reader View');
 
-        // Check for Navigation controls
-        const navButtons = container.querySelectorAll('.releaf-nav .releaf-btn');
-        expect(navButtons.length).toBe(2);
+        // Check for Settings Popup
+        const settingsPopup = container.querySelector('.releaf-settings-popup');
+        expect(settingsPopup).not.toBeNull();
 
-        // Mock scrollTo
+        // Mock scrollTo for navigation tests
         content.scrollTo = jest.fn();
 
-        // Click Next
-        navButtons[1].click();
+        // Mock window.innerWidth for zone detection
+        Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true });
+
+        // Helper to simulate a tap on container at specific x position
+        const simulateTap = (x) => {
+            const mousedown = new MouseEvent('mousedown', { clientX: x, clientY: 50, bubbles: true });
+            const mouseup = new MouseEvent('mouseup', { clientX: x, clientY: 50, bubbles: true });
+            container.dispatchEvent(mousedown);
+            container.dispatchEvent(mouseup);
+        };
+
+        // Simulate left zone tap (x < 20% = 200px)
+        simulateTap(100);
         expect(content.scrollTo).toHaveBeenCalled();
 
-        // Click Prev
-        navButtons[0].click();
+        // Simulate right zone tap (x > 80% = 800px)
+        simulateTap(900);
         expect(content.scrollTo).toHaveBeenCalled();
 
         expect(document.body.style.overflow).toBe('hidden');
@@ -109,5 +118,29 @@ describe('Re:Leaf Content Script', () => {
         toggleReleaf();
 
         expect(document.getElementById('releaf-container')).not.toBeNull();
+    });
+
+    test('Immersive mode hides UI after inactivity', () => {
+        jest.useFakeTimers();
+        document.body.innerHTML = '<p>Test content for immersive mode</p>';
+        enableReleaf();
+        const container = document.getElementById('releaf-container');
+
+        // Initially visible
+        expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+        // Fast-forward time
+        jest.advanceTimersByTime(3000);
+
+        // Should be hidden
+        expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
+
+        // Simulate activity (mousemove)
+        document.dispatchEvent(new Event('mousemove'));
+
+        // Should be visible again
+        expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+        jest.useRealTimers();
     });
 });

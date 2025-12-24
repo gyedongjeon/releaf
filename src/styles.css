@@ -1,30 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap');
+
 /* Re:Leaf Styles */
 
 :root {
-  --releaf-bg: #fcf6e5;
-  --releaf-text: #333333;
-  --releaf-accent: #5e4b35;
-  --releaf-font: "Georgia", "Times New Roman", serif;
+  /* RGB values for transparency support */
+  --releaf-bg-rgb: 252, 246, 229;
+  /* #fcf6e5 */
+  --releaf-text-rgb: 51, 51, 51;
+  /* #333333 */
+  --releaf-accent-rgb: 94, 75, 53;
+  /* #5e4b35 */
+
+  --releaf-font: "Merriweather", "Georgia", serif;
+  --releaf-ui-font: "Inter", sans-serif;
   --releaf-font-size: 20px;
+  --releaf-line-height: 1.8;
+  --releaf-margin-v: 80px;
+  --releaf-margin-h: 40px;
+
+  /* Derived colors */
+  --releaf-bg: rgb(var(--releaf-bg-rgb));
+  --releaf-text: rgb(var(--releaf-text-rgb));
+  --releaf-accent: rgb(var(--releaf-accent-rgb));
 }
 
 /* Themes */
 .releaf-theme-light {
-  --releaf-bg: #ffffff;
-  --releaf-text: #222222;
-  --releaf-accent: #eaeaea;
+  --releaf-bg-rgb: 255, 255, 255;
+  --releaf-text-rgb: 34, 34, 34;
+  --releaf-accent-rgb: 234, 234, 234;
 }
 
 .releaf-theme-sepia {
-  --releaf-bg: #fcf6e5;
-  --releaf-text: #4a3c31;
-  --releaf-accent: #eaddcf;
+  --releaf-bg-rgb: 252, 246, 229;
+  --releaf-text-rgb: 74, 60, 49;
+  --releaf-accent-rgb: 234, 221, 207;
 }
 
 .releaf-theme-dark {
-  --releaf-bg: #1a1a1a;
-  --releaf-text: #d4d4d4;
-  --releaf-accent: #333333;
+  --releaf-bg-rgb: 26, 26, 26;
+  --releaf-text-rgb: 212, 212, 212;
+  --releaf-accent-rgb: 51, 51, 51;
 }
 
 #releaf-container {
@@ -33,8 +49,9 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: var(--releaf-bg);
-  color: var(--releaf-text);
+  /* Use rgb() directly so inline style overrides work */
+  background-color: rgb(var(--releaf-bg-rgb));
+  color: rgb(var(--releaf-text-rgb));
   z-index: 2147483647;
   /* Max z-index */
   /* Disable vertical scroll */
@@ -46,74 +63,78 @@
   transition: background-color 0.3s, color 0.3s;
 }
 
-/* Top Bar */
-.releaf-header {
-  position: fixed;
-  /* Fixed to stay on top */
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 60px;
-  background-color: var(--releaf-bg);
-  padding: 0 40px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 15px;
-  border-bottom: 1px solid var(--releaf-accent);
-  transition: background-color 0.3s, border-color 0.3s;
-  z-index: 10;
-  box-sizing: border-box;
+/* UI Animation */
+@keyframes releaf-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .releaf-btn {
-  background: none;
-  border: 1px solid var(--releaf-text);
+  background: transparent;
+  border: 1px solid rgba(var(--releaf-text-rgb), 0.2);
   color: var(--releaf-text);
-  padding: 5px 10px;
+  padding: 6px 14px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 20px;
+  /* Pill shape */
   font-size: 14px;
-  font-family: sans-serif;
-  opacity: 0.7;
+  font-weight: 500;
+  font-family: var(--releaf-ui-font);
+  transition: all 0.2s ease;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0.8;
 }
 
 .releaf-btn:hover {
   opacity: 1;
+  background-color: rgba(var(--releaf-text-rgb), 0.05);
+  border-color: rgba(var(--releaf-text-rgb), 0.4);
+  transform: translateY(-1px);
+}
+
+.releaf-btn:active {
+  transform: translateY(0);
 }
 
 /* Pagination Content */
 .releaf-content {
-  /* Calculated height: 100vh - header(60px) - bottom_nav_space(60px) - top_margin(80px) */
-  /* We need to ensure columns stop before they hit the buttons at bottom: 20px */
-  /* Let's reserve ~80px at the bottom. */
-  height: calc(100vh - 160px);
-  margin-top: 80px;
-  /* Space for fixed header */
-  padding: 0 40px;
+  height: calc(100vh - var(--releaf-margin-v) * 2);
+  margin-top: var(--releaf-margin-v);
+  padding: 0 var(--releaf-margin-h);
 
-  /* CSS Columns for Pagination */
+  /* CSS Columns for Pagination - 1 page view (default) */
   column-fill: auto;
-  column-width: calc(100vw - 80px);
-  /* Viewport width - padding */
-  column-gap: 80px;
+  column-width: calc(100vw - var(--releaf-margin-h) * 2);
+  column-gap: calc(var(--releaf-margin-h) * 2);
 
   font-size: var(--releaf-font-size);
+  line-height: var(--releaf-line-height);
 
   /* Horizontal scrolling for pages */
   overflow-x: hidden;
-  /* Hidden because we scroll programmatically */
   overflow-y: hidden;
+
+  animation: releaf-fade-in 0.6s ease-out;
 }
 
-/* Navigation Controls Overlay */
-.releaf-nav {
-  position: fixed;
-  bottom: 20px;
-  right: 40px;
-  display: flex;
-  gap: 10px;
-  z-index: 20;
+/* 2-page view mode */
+/* Force exactly 2 columns using column-count */
+/* Columns will auto-size to fit within the content box */
+.releaf-2page .releaf-content {
+  column-count: 2;
+  column-width: auto;
+  column-gap: 60px;
 }
 
 /* Content Elements */
@@ -133,16 +154,22 @@
 .releaf-content p {
   margin-bottom: 1.5em;
   text-align: justify;
+  /* Prevent long URLs from breaking layout */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .releaf-content img {
   display: block;
   margin: 1em auto;
   max-width: 100%;
-  max-height: 80vh;
-  /* Prevent images larger than page */
+  max-height: 60vh;
+  /* Prevent images larger than column */
   border-radius: 4px;
   break-inside: avoid;
+  /* Ensure image doesn't span columns */
+  column-span: none;
+  object-fit: contain;
 }
 
 .releaf-content blockquote {
@@ -168,4 +195,270 @@
   padding: 15px;
   overflow-x: auto;
   white-space: pre-wrap;
+}
+
+/* Bottom Menu Bar - Glassmorphism */
+.releaf-bottom-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 64px;
+
+  /* Fixed light background for readability */
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+
+  z-index: 15;
+  box-sizing: border-box;
+
+  /* Hidden by default */
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.releaf-page-counter {
+  font-family: var(--releaf-ui-font);
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Show menu when active */
+.releaf-menu-visible .releaf-bottom-menu {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Hide old header and nav when bottom menu is active */
+.releaf-menu-visible .releaf-header,
+.releaf-menu-visible .releaf-nav {
+  display: none;
+}
+
+/* Page indicator in menu */
+.releaf-page-indicator {
+  font-family: var(--releaf-ui-font);
+  font-size: 14px;
+  color: var(--releaf-text);
+  opacity: 0.6;
+}
+
+/* Settings Popup */
+.releaf-settings-popup {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+
+  /* Fixed light background for readability */
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+
+  /* Fixed dark text for readability */
+  color: #333333;
+
+  padding: 20px;
+  z-index: 25;
+
+  /* Hidden by default */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.releaf-settings-visible .releaf-settings-popup {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Settings Header */
+.releaf-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(var(--releaf-text-rgb), 0.1);
+}
+
+.releaf-settings-title {
+  font-family: var(--releaf-ui-font);
+  font-size: 16px;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.releaf-settings-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #333333;
+  opacity: 0.6;
+  padding: 4px;
+}
+
+.releaf-settings-close:hover {
+  opacity: 1;
+}
+
+/* Color Swatches */
+.releaf-color-swatches {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.releaf-color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.releaf-color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.releaf-color-swatch.active {
+  border-color: #333333;
+}
+
+.releaf-swatch-light {
+  background-color: #ffffff;
+  border-color: #e0e0e0;
+}
+
+.releaf-swatch-cream {
+  background-color: #fcf6e5;
+}
+
+.releaf-swatch-mint {
+  background-color: #e8f5e9;
+}
+
+.releaf-swatch-green {
+  background-color: #15803d;
+}
+
+.releaf-swatch-gray {
+  background-color: #6b7280;
+}
+
+.releaf-swatch-dark {
+  background-color: #1a1a1a;
+}
+
+/* Settings Row */
+.releaf-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.releaf-settings-label {
+  font-family: var(--releaf-ui-font);
+  font-size: 14px;
+  color: #333333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.releaf-settings-label svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+}
+
+/* Slider */
+.releaf-slider {
+  width: 140px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  outline: none;
+}
+
+.releaf-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #333333;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.releaf-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.releaf-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #333333;
+  cursor: pointer;
+  border: none;
+}
+
+/* Page View Buttons */
+.releaf-page-view-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.releaf-page-view-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: transparent;
+  color: #333333;
+  font-family: var(--releaf-ui-font);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.releaf-page-view-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.releaf-page-view-btn.active {
+  background: #333333;
+  color: #ffffff;
+  border-color: #333333;
 }
