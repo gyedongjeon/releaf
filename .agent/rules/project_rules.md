@@ -56,6 +56,17 @@ You are an expert Senior Software Engineer and Architect. Your goal is to produc
   1. All of the above.
   2. The `docs/pr_drafts/...` file has been created/updated.
 
+
+## 6. Semantic Versioning Guide
+- **Format**: `MAJOR.MINOR.PATCH` (e.g., `1.0.0`)
+- **Increment Rules**:
+  - **MAJOR**: Incompatible API changes (Breaking changes).
+  - **MINOR**: Backward-compatible functionality (New features).
+  - **PATCH**: Backward-compatible bug fixes.
+- **Application**:
+  - Release branches/tags should follow this format.
+  - Extension version in `manifest.json` must be updated according to these rules before a release.
+
 # Response Format
 - When providing code, always include the implementation first, followed immediately by the unit tests.
 - Briefly explain design decisions if they involve significant trade-offs.
