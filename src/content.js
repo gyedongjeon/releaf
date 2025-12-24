@@ -348,8 +348,12 @@ function enableReleaf() {
                 Page View
             </span>
             <div class="releaf-page-view-btns">
-                <button class="releaf-page-view-btn active" data-pages="1">1</button>
-                <button class="releaf-page-view-btn" data-pages="2">2</button>
+                <button class="releaf-page-view-btn active" data-pages="1" title="Single Page View">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                </button>
+                <button class="releaf-page-view-btn" data-pages="2" title="Two Page View">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M12 2v20"/></svg>
+                </button>
             </div>
         </div>
     `;
