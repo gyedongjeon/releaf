@@ -65,10 +65,10 @@ describe('Re:Leaf Content Script', () => {
         const closeBtn = container.querySelector('.releaf-btn'); // Matches any button with this class
         expect(closeBtn).not.toBeNull();
 
-        // Use title matcher effectively - bottom menu now only has Settings and Close
-        const buttonTitles = Array.from(container.querySelectorAll('.releaf-btn')).map(b => b.title);
-        expect(buttonTitles).toContain('View Settings');
-        expect(buttonTitles).toContain('Close Reader View');
+        // Use dataset.tooltip matcher effectively - bottom menu now only has Settings and Close
+        const buttonTooltips = Array.from(container.querySelectorAll('.releaf-btn')).map(b => b.dataset.tooltip);
+        expect(buttonTooltips).toContain('Settings');
+        expect(buttonTooltips).toContain('Close Reader');
 
         // Check for Settings Popup
         const settingsPopup = container.querySelector('.releaf-settings-popup');

@@ -183,11 +183,15 @@ function enableReleaf() {
         }
     };
 
-    // Close Button (for bottom menu)
+    // Close Button (Rounded X)
     const closeBtn = document.createElement("button");
     closeBtn.className = "releaf-btn";
-    closeBtn.title = "Close Reader View";
-    closeBtn.appendChild(createIcon(ICONS.close));
+    closeBtn.dataset.tooltip = "Close Reader"; // Custom tooltip
+    closeBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+    </svg>`;
     closeBtn.onclick = toggleReleaf;
 
     // Create the content wrapper
@@ -280,10 +284,12 @@ function enableReleaf() {
     // Settings Button (Gear Icon)
     const settingsBtn = document.createElement("button");
     settingsBtn.className = "releaf-btn";
-    settingsBtn.title = "View Settings";
-    settingsBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    settingsBtn.title = ""; // Removed standard title to use custom tooltip
+    settingsBtn.dataset.tooltip = "Settings";
+    // Premium Gear Icon (Lucide-style)
+    settingsBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
         <circle cx="12" cy="12" r="3"></circle>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
     </svg>`;
 
     // Toggle settings popup
@@ -309,26 +315,45 @@ function enableReleaf() {
             <div class="releaf-color-swatch releaf-swatch-dark" data-theme="dark"></div>
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">📖 Text Size</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+                Text Size
+            </span>
             <input type="range" class="releaf-slider" id="releaf-font-size" min="14" max="32" value="20">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">📏 Line Spacing</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M21 18H3"/></svg>
+                Line Spacing
+            </span>
             <input type="range" class="releaf-slider" id="releaf-line-height" min="12" max="24" value="18">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">↕️ Vertical Margin</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m8 7 4-4 4 4"/><path d="m8 17 4 4 4-4"/></svg>
+                Vertical Margin
+            </span>
             <input type="range" class="releaf-slider" id="releaf-margin-v" min="40" max="120" value="80">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">↔️ Horizontal Margin</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/></svg>
+                Horizontal Margin
+            </span>
             <input type="range" class="releaf-slider" id="releaf-margin-h" min="20" max="80" value="40">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">📄 Page View</span>
+            <span class="releaf-settings-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="15" y1="3" y2="3"/><line x1="9" x2="15" y1="21" y2="21"/></svg>
+                Page View
+            </span>
             <div class="releaf-page-view-btns">
-                <button class="releaf-page-view-btn active" data-pages="1">1</button>
-                <button class="releaf-page-view-btn" data-pages="2">2</button>
+                <button class="releaf-page-view-btn active" data-pages="1" title="Single Page View">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2" /></svg>
+                </button>
+                <button class="releaf-page-view-btn" data-pages="2" title="Two Page View">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><line x1="12" y1="4" x2="12" y2="20" /></svg>
+                </button>
             </div>
         </div>
     `;
@@ -438,6 +463,33 @@ function enableReleaf() {
 
     // Initial update after layout
     setTimeout(updatePageCount, 100);
+
+    // Tooltip Helper
+    const showTooltip = (target, text) => {
+        let tooltip = document.getElementById('releaf-tooltip');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = 'releaf-tooltip';
+            tooltip.className = 'releaf-tooltip';
+            document.body.appendChild(tooltip);
+        }
+        tooltip.textContent = text;
+        const rect = target.getBoundingClientRect();
+        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+        tooltip.style.bottom = `${window.innerHeight - rect.top + 8}px`; // Position above
+        tooltip.classList.add('visible');
+    };
+
+    const hideTooltip = () => {
+        const tooltip = document.getElementById('releaf-tooltip');
+        if (tooltip) tooltip.classList.remove('visible');
+    };
+
+    // Attach tooltips
+    [settingsBtn, closeBtn].forEach(btn => {
+        btn.addEventListener('mouseenter', (e) => showTooltip(e.currentTarget, e.currentTarget.dataset.tooltip));
+        btn.addEventListener('mouseleave', hideTooltip);
+    });
 
     // Add to bottom menu (Order: Settings | Counter | Close)
     bottomMenu.appendChild(settingsBtn);
