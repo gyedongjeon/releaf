@@ -128,11 +128,16 @@
   animation: releaf-fade-in 0.6s ease-out;
 }
 
-/* 2-page view mode - force exactly 2 columns */
+/* 2-page view mode */
+/* For scroll alignment: 2 columns + gap must equal viewport width (scroll distance) */
+/* 1-page mode: column = (100vw - 2*margin), gap = 2*margin → column + gap = 100vw */
+/* 2-page mode: 2 * column + gap = 100vw */
+/* Using gap = 2*margin (same as 1-page), column = (100vw - 2*margin) / 2 */
 .releaf-2page .releaf-content {
-  column-count: 2;
-  column-width: auto;
-  column-gap: 40px;
+  /* Override column-width to half of 1-page column width */
+  column-width: calc((100vw - var(--releaf-margin-h) * 2) / 2);
+  /* Keep same gap as 1-page mode for consistent scroll alignment */
+  column-gap: calc(var(--releaf-margin-h) * 2);
 }
 
 /* Content Elements */
