@@ -40,11 +40,19 @@ function toggleReleaf() {
  * Extracts content from the page, preserving structure.
  * @returns {string} HTML string of the extracted content
  */
+/**
+ * Extracts content from the page, preserving structure.
+ * @returns {string} HTML string of the extracted content
+ */
 function extractContent() {
-    // Heuristic: Try to find the main article content.
-    // Order matters: specific IDs often used for main content > semantic tags > fallback
+    // 1. Selector Candidates
+    // specific IDs often used for main content > semantic tags > fallback
+    // Added '#dic_area' for Naver News support
     const candidates = [
-        'article', 'main', '#content', '#main', '#bodyContent', '.main-content', '.post-content', '.article-content'
+        '#dic_area', '.newsct_article', // Naver News
+        'article', 'main', '#content', '#main', '#bodyContent',
+        '.main-content', '.post-content', '.article-content',
+        '.entry-content', '#story-body'
     ];
 
     let article = null;
@@ -54,53 +62,62 @@ function extractContent() {
     }
     article = article || document.body;
 
-    // Create a clone to manipulate without affecting the original page during extraction
+    // 2. Clone to manipulate safely
     const clone = article.cloneNode(true);
 
-    // Remove scripts, styles, and interactive elements that clutter reading
-    // Expanded list to include common sidebar/nav patterns
+    // 3. Remove Unwanted Elements (Noise)
     const unwantedSelectors = [
-        'script', 'style', 'nav', 'footer', 'iframe', 'form', 'button',
+        'script', 'style', 'noscript', 'iframe', 'form', 'button', 'input', 'textarea',
+        'nav', 'footer', 'header', 'aside',
         '[role="banner"]', '[role="navigation"]', '[role="complementary"]', '[role="search"]',
         '.sidebar', '#sidebar', '.menu', '#menu', '.nav', '.navigation', '.toc', '#toc',
-        '.language-list', '.interlanguage-link', '#p-lang', // Specific to language menus
-        '.ad', '.advertisement', '.social-share'
+        '.language-list', '.interlanguage-link', '#p-lang',
+        '.ad', '.advertisement', '.social-share', '.share-buttons',
+        '.related-posts', '.comments', '#comments', '.meta', '.author-bio'
     ];
 
-    const unwanted = clone.querySelectorAll(unwantedSelectors.join(', '));
-    unwanted.forEach(el => el.remove());
+    // Safety check: Don't remove if the article IS one of these (unlikely but possible with poor semantics)
+    clone.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
 
-    // Filter for readable elements
-    const readableSelectors = 'p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, img, figure, pre, table';
-    const elements = clone.querySelectorAll(readableSelectors);
+    // 4. Attribute Stripping & Cleanup
+    // Instead of selecting specific tags, we walk the tree and clean it.
+    // This preserves Text Nodes (direct text children) and structure (divs used as paragraphs).
+    const walk = document.createTreeWalker(clone, NodeFilter.SHOW_ELEMENT);
+    let currentNode = walk.nextNode(); // Skip root
 
-    let extractedHtml = '';
+    while (currentNode) {
+        const el = currentNode;
+        currentNode = walk.nextNode(); // Advance pointer before modification
 
-    elements.forEach(el => {
-        // Basic filtering: ignore hidden or empty elements
-        // offsetParent check is good for real browsers but fails in JSDOM.
-        // We'll rely on basic empty check for now.
-        if (el.tagName !== 'BODY' && el.tagName !== 'IMG' && el.textContent.trim().length === 0) return;
+        // 4.1 Remove all attributes except "src", "href", "alt"
+        const attrs = [...el.attributes];
+        attrs.forEach(attr => {
+            if (!['src', 'href', 'alt', 'title', 'rowspan', 'colspan'].includes(attr.name)) {
+                el.removeAttribute(attr.name);
+            }
+        });
 
-        // Clean up inline styles for a consistent reading experience
-        el.removeAttribute('style');
-        el.removeAttribute('class');
-        el.removeAttribute('id');
-
-        // For images, fix relative URLs
+        // 4.2 Handling Images
         if (el.tagName === 'IMG') {
-            if (!el.src) return; // Skip images without src
+            // Lazy loading fix: often src is hidden in data-src
+            const dataSrc = el.getAttribute('data-src') || el.getAttribute('data-original');
+            if (dataSrc) {
+                el.src = dataSrc;
+            }
+            // Enhance basic image styling
             el.style.maxWidth = '100%';
             el.style.height = 'auto';
+            el.style.display = 'block';
+            el.style.margin = '1em auto';
+            continue;
         }
 
-        // Check if the element contains text or has essential content (like img)
-        if (el.textContent.trim().length > 0 || el.tagName === 'IMG' || el.tagName === 'FIGURE') {
-            extractedHtml += el.outerHTML;
-        }
-    });
+        // 4.3 Unwrap useless containers? (Optional, but 'div' stripping might be risky)
+        // For now, keep structure but rely on CSS to handle it.
+    }
 
-    return extractedHtml;
+    // 5. Return Cleaned HTML
+    return clone.innerHTML;
 }
 
 /**
