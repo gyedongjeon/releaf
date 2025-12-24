@@ -154,6 +154,9 @@
 .releaf-content p {
   margin-bottom: 1.5em;
   text-align: justify;
+  /* Prevent long URLs from breaking layout */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .releaf-content img {

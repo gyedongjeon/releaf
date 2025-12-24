@@ -207,7 +207,7 @@ function enableReleaf() {
         const visibleContentWidth = content.clientWidth - paddingLeft - paddingRight;
 
         // Scroll distance = one 'screenful' of content + the gap to the next column
-        return visibleContentWidth + columnGap;
+        return Math.round(visibleContentWidth + columnGap);
     };
 
     const goToPrevPage = () => {
