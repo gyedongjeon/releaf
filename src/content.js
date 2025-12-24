@@ -196,8 +196,19 @@ function enableReleaf() {
     content.innerHTML = contentHtml;
 
     // Navigation functions (used by touch zones and keyboard)
-    // Use content.clientWidth for scroll distance - this matches the column layout
-    const getPageWidth = () => content.clientWidth + 60; // clientWidth + gap
+    // Precise scroll distance calculation
+    const getPageWidth = () => {
+        const style = window.getComputedStyle(content);
+        const paddingLeft = parseFloat(style.paddingLeft) || 0;
+        const paddingRight = parseFloat(style.paddingRight) || 0;
+        const columnGap = parseFloat(style.columnGap) || 0;
+
+        // Content area width (viewport - visible padding)
+        const visibleContentWidth = content.clientWidth - paddingLeft - paddingRight;
+
+        // Scroll distance = one 'screenful' of content + the gap to the next column
+        return visibleContentWidth + columnGap;
+    };
 
     const goToPrevPage = () => {
         const pageWidth = getPageWidth();
