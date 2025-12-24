@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Re:Leaf",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Transform web pages into a clean, ebook-like reading view.",
   "permissions": [
     "activeTab",
@@ -22,18 +22,5 @@
   },
   "background": {
     "service_worker": "src/background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "src/content.js"
-      ],
-      "css": [
-        "src/styles.css"
-      ]
-    }
-  ]
+  }
 }
