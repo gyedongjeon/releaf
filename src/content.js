@@ -259,22 +259,12 @@ function enableReleaf() {
     const goToNextPage = () => {
         const pageWidth = getPageWidth();
         const currentScroll = content.scrollLeft;
-        const maxScroll = content.scrollWidth - content.clientWidth;
 
-        // Don't navigate if we're already at or very near the end (within 5px tolerance)
-        if (currentScroll >= maxScroll - 5) {
-            return;
-        }
-
-        // Calculate next page position
+        // Calculate next page position aligned to page width
         const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
         const targetScroll = targetPage * pageWidth;
 
-        // Use the smaller of targetScroll and maxScroll, but only scroll if it's different
-        const finalScroll = Math.min(targetScroll, maxScroll);
-        if (Math.abs(finalScroll - currentScroll) > 5) {
-            content.scrollTo({ left: finalScroll, behavior: 'smooth' });
-        }
+        content.scrollTo({ left: targetScroll, behavior: 'smooth' });
     };
 
     const toggleMenu = () => {
