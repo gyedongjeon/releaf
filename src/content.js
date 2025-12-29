@@ -44,6 +44,7 @@ function extractContent() {
     // Added '#dic_area' for Naver News support
     const candidates = [
         '#dic_area', '.newsct_article', // Naver News
+        '#article_txt', '.article_txt', // Donga
         'article', 'main', '#content', '#main', '#bodyContent',
         '.main-content', '.post-content', '.article-content',
         '.entry-content', '#story-body'
@@ -51,10 +52,18 @@ function extractContent() {
 
     let article = null;
     for (const selector of candidates) {
-        article = document.querySelector(selector);
-        if (article) break;
+        const found = document.querySelector(selector);
+        // Heuristic: Content must be of substantial length to be the "main" article
+        // This prevents selecting a tiny <article> tag that only contains a byline.
+        if (found && found.innerText.length > 200) {
+            article = found;
+            break;
+        }
     }
-    article = article || document.body;
+    // Fallback if nothing passed the length check
+    if (!article) {
+        article = document.querySelector('article') || document.body;
+    }
 
     // 2. Clone to manipulate safely
     const clone = article.cloneNode(true);
