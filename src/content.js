@@ -55,7 +55,9 @@ function extractContent() {
         const found = document.querySelector(selector);
         // Heuristic: Content must be of substantial length to be the "main" article
         // This prevents selecting a tiny <article> tag that only contains a byline.
-        if (found && found.innerText.length > 200) {
+        // Use textContent as fallback for JSDOM compatibility
+        const textLength = found ? (found.innerText || found.textContent || '').length : 0;
+        if (found && textLength > 200) {
             article = found;
             break;
         }
