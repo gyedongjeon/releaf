@@ -477,7 +477,7 @@ function enableReleaf() {
         const steps = [
             {
                 title: "Welcome to Re:Leaf! 🌿",
-                text: "Tap the <b>Left</b> or <b>Right</b> sides of the screen to turn pages comfortably.",
+                text: "Tap <b>Left/Right</b> to turn pages.<br>Tap <b>Center</b> to show the menu.",
                 action: () => {
                     // Show zone indicators
                     const leftZone = document.createElement('div');
@@ -489,6 +489,11 @@ function enableReleaf() {
                     rightZone.className = 'releaf-zone-indicator releaf-zone-right';
                     rightZone.textContent = 'Next';
                     overlay.appendChild(rightZone);
+
+                    const centerZone = document.createElement('div');
+                    centerZone.className = 'releaf-zone-indicator releaf-zone-center';
+                    centerZone.textContent = 'Menu';
+                    overlay.appendChild(centerZone);
                 },
                 cleanup: () => {
                     overlay.querySelectorAll('.releaf-zone-indicator').forEach(el => el.remove());
