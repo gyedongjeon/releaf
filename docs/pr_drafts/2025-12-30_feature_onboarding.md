@@ -8,15 +8,12 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
     -   Added `releaf_hasSeenTutorial` check in local storage.
     -   Implemented a 3-step overlay tutorial:
         1.  **Welcome & Navigation**: Shows "Prev", "Next", and **"Menu" (Center)** tap zones.
-        2.  **Settings**: Highlights the settings gear.
-        3.  **Exit**: Highlights the close button.
-    -   **Fix**: Forces bottom menu to open automatically during the Settings step.
+        2.  **Settings**: Text instructions for customization.
+        3.  **Exit**: Text instructions for closing.
     -   Added **"Don't show again"** checkbox.
     -   Logic: Flag is saved ONLY IF user completes the tour OR explicitly checks "Don't show again".
 -   **Styles**:
     -   Added dark overlay and card styles (zIndex 9999).
-    -   Added `releaf-highlight` animation (zIndex 10002).
-    -   Added CSS `:has` selector to lift the `bottom-menu` zIndex when highlighted.
     -   Added styles for `.releaf-zone-center`.
     -   Improved text contrast (Bold = Black).
 -   **Tests**:
@@ -28,4 +25,4 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
 -   [x] User can opt-out via checkbox.
 -   [x] "Menu" zone is clearly visible.
 -   [x] Instructions are easy to read.
--   [x] **Settings Gear is VISIBLE and highlighted** (Menu auto-opens).
+-   [x] **Simplified Layout**: Removed complex element highlighting to prevent visual bugs.
