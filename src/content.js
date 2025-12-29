@@ -69,7 +69,10 @@ function extractContent() {
         '.sidebar', '#sidebar', '.menu', '#menu', '.nav', '.navigation', '.toc', '#toc',
         '.language-list', '.interlanguage-link', '#p-lang',
         '.ad', '.advertisement', '.social-share', '.share-buttons',
-        '.related-posts', '.comments', '#comments', '.meta', '.author-bio'
+        '.related-posts', '.comments', '#comments', '.meta', '.author-bio',
+        // Daum/Naver specific noise
+        '.layer_util', '.box_setting', '.util_view', '.wrap_util',
+        '.box_layer', '.img_mask', '.btn_util'
     ];
 
     // Safety check: Don't remove if the article IS one of these (unlikely but possible with poor semantics)
