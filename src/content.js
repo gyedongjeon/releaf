@@ -476,7 +476,7 @@ function enableReleaf() {
         let currentStep = 0;
         const steps = [
             {
-                title: `Welcome to Re:Leaf! <img src="${chrome.runtime.getURL('images/icon-48.png')}" class="releaf-tutorial-logo" alt="Leaf Logo"/>`,
+                title: `Welcome to Re:Leaf! <img src="${chrome.runtime.getURL('src/assets/logo.png')}" class="releaf-tutorial-logo" alt="Leaf Logo"/>`,
                 text: "Tap <b>Left/Right</b> to turn pages.<br>Tap <b>Center</b> to show the menu.",
                 action: () => {
                     // Show zone indicators
