@@ -17,6 +17,7 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
     -   Added `releaf-highlight` animation (zIndex 10002).
     -   Added CSS `:has` selector to lift the `bottom-menu` zIndex when highlighted.
     -   Added styles for `.releaf-zone-center`.
+    -   Improved text contrast for instructions (Bold text is now Dark Black).
 -   **Tests**:
     -   Added test case to verify tutorial launches when storage flag is missing.
     -   Verified UI elements (checkbox) exist.
@@ -25,4 +26,5 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
 -   [x] Tutorial appears on first run.
 -   [x] User can opt-out via checkbox.
 -   [x] "Menu" zone is clearly visible.
+-   [x] Instructions are easy to read (High Contrast).
 -   [x] Settings gear pops out above the overlay.
