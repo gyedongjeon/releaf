@@ -553,10 +553,10 @@ function enableReleaf() {
             // Handle target highlight
             if (step.target) {
                 step.target.classList.add('releaf-highlight');
-                // Ensure menu is visible if target is in it
-                if (getComputedStyle(bottomMenu).opacity === '0') {
-                    container.classList.remove('releaf-ui-hidden'); // Force UI show
-                }
+
+                // FORCE SHOW UI: Remove immersive hide AND add menu visible class
+                container.classList.remove('releaf-ui-hidden');
+                container.classList.add('releaf-menu-visible');
             }
 
             // Run action if any
