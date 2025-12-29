@@ -11,10 +11,12 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
         2.  **Settings**: Text instructions for customization.
         3.  **Exit**: Text instructions for closing.
     -   Added **"Don't show again"** checkbox.
+    -   **Branding**: Uses official extension logo (`icon-48.png`) in header instead of emoji.
     -   Logic: Flag is saved ONLY IF user completes the tour OR explicitly checks "Don't show again".
 -   **Styles**:
     -   Added dark overlay and card styles (zIndex 9999).
     -   Improved text contrast (Bold color inherits from parent).
+    -   Aligned logo vertically in tutorial header.
 -   **Tests**:
     -   Added test case to verify tutorial launches when storage flag is missing.
     -   Verified UI elements (checkbox) exist.
@@ -23,4 +25,4 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
 -   [x] Tutorial appears on first run.
 -   [x] User can opt-out via checkbox.
 -   [x] "Prev/Next" zones are clearly visible.
--   [x] UI is clean (No overlapping elements behind card).
+-   [x] Branding uses official logo.
