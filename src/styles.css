@@ -563,6 +563,11 @@
   color: #666;
 }
 
+.releaf-tutorial-card b {
+  color: #111;
+  font-weight: 700;
+}
+
 .releaf-tutorial-btn {
   background: #222;
   color: white;
