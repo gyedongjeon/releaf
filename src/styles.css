@@ -135,6 +135,9 @@
   column-count: 2;
   column-width: auto;
   column-gap: 60px;
+  /* Add padding to allow scrolling the last column to the left side 
+     (shows empty space on the right instead of previous column) */
+  padding-right: 50vw;
 }
 
 /* Content Elements */
