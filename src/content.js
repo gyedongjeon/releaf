@@ -501,13 +501,11 @@ function enableReleaf() {
             },
             {
                 title: "Customization",
-                text: "Click the <b>Settings Gear</b> to change themes, font size, and spacing.",
-                target: settingsBtn
+                text: "Click the <b>Settings Gear</b> to change themes, font size, and spacing."
             },
             {
                 title: "Finished Reading?",
-                text: "Click the <b>Close Button</b> or press <b>Escape</b> to return to the original page.",
-                target: closeBtn
+                text: "Click the <b>Close Button</b> or press <b>Escape</b> to return to the original page."
             }
         ];
 
