@@ -8,7 +8,8 @@ Adds a first-run tutorial overlay and refines content extraction for Korean news
     -   **Fix**: Added filters for Daum/Naver News utility menus (TTS, Font settings).
     -   **Fix**: Added filters for Daum News **Footers & Related Articles**.
     -   **Fix**: Improved extraction for Donga.com (ignores short metadata blocks).
-    -   **Fix**: 2-Page View now allows empty columns on the last page (prevents content duplication).
+    -   **Fix**: 2-Page View now allows empty columns on the last page.
+        -   Uses `padding-right: 50vw` to prevent "stuck" scrolling or content duplication on the final page.
     -   Added `releaf_hasSeenTutorial` check.
     -   Implemented a 3-step overlay tutorial.
     -   Branding: Uses official extension logo (`src/assets/logo.png`).
