@@ -131,13 +131,15 @@
 /* 2-page view mode */
 /* Force exactly 2 columns using column-count */
 /* Columns will auto-size to fit within the content box */
-.releaf-2page .releaf-content {
-  column-count: 2;
-  column-width: auto;
-  column-gap: 60px;
-  /* Add padding to allow scrolling the last column to the left side 
-     (shows empty space on the right instead of previous column) */
-  padding-right: 50vw;
+/* Use column-width to allow creating as many columns as needed horizontally */
+column-count: auto;
+/* (100vw - margins) / 2 approx. Let the browser fit 2 columns per screen */
+column-width: calc(50vw - 80px);
+column-gap: 60px;
+
+/* Ensure height is constrained so columns flow horizontally */
+height: calc(100vh - 120px);
+column-fill: auto;
 }
 
 /* Content Elements */
