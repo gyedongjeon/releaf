@@ -84,7 +84,14 @@ function extractContent() {
         '.box_layer', '.img_mask', '.btn_util',
         // Daum/Naver Footers & Related
         '.foot_view', '.box_recommend', '.txt_copyright', '.box_etc',
-        '#foot_view', '.kakao_ad', '.art_copy'
+        '#foot_view', '.kakao_ad', '.art_copy',
+        // Donga specific noise
+        '.article_foot', '.article_copy', '.article_relation', '.article_sns',
+        '.article_issue', '.article_related', '.article_reporter',
+        '.copyright', '.copy_txt', '.relation_list', '.link_news',
+        // Generic footer patterns
+        '[class*="copyright"]', '[class*="footer"]', '[class*="related"]',
+        '[id*="copyright"]', '[id*="footer"]', '[id*="related"]'
     ];
 
     // Safety check: Don't remove if the article IS one of these (unlikely but possible with poor semantics)
