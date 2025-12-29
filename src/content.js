@@ -390,18 +390,112 @@ function enableReleaf() {
         }
     });
 
-    // Load saved settings
+    // Tutorial Logic
+    const launchTutorial = () => {
+        // Create Overlay
+        const overlay = document.createElement("div");
+        overlay.className = "releaf-tutorial-overlay";
+
+        const card = document.createElement("div");
+        card.className = "releaf-tutorial-card";
+        overlay.appendChild(card);
+        container.appendChild(overlay);
+
+        let currentStep = 0;
+        const steps = [
+            {
+                title: "Welcome to Re:Leaf! 🌿",
+                text: "Tap the <b>Left</b> or <b>Right</b> sides of the screen to turn pages comfortably.",
+                action: () => {
+                    // Show zone indicators
+                    const leftZone = document.createElement('div');
+                    leftZone.className = 'releaf-zone-indicator releaf-zone-left';
+                    leftZone.textContent = 'Prev';
+                    overlay.appendChild(leftZone);
+
+                    const rightZone = document.createElement('div');
+                    rightZone.className = 'releaf-zone-indicator releaf-zone-right';
+                    rightZone.textContent = 'Next';
+                    overlay.appendChild(rightZone);
+                },
+                cleanup: () => {
+                    overlay.querySelectorAll('.releaf-zone-indicator').forEach(el => el.remove());
+                }
+            },
+            {
+                title: "Customization",
+                text: "Click the <b>Settings Gear</b> to change themes, font size, and spacing.",
+                target: settingsBtn
+            },
+            {
+                title: "Finished Reading?",
+                text: "Click the <b>Close Button</b> or press <b>Escape</b> to return to the original page.",
+                target: closeBtn
+            }
+        ];
+
+        const showStep = (index) => {
+            if (index >= steps.length) {
+                // Tutorial Complete
+                overlay.classList.remove('visible');
+                setTimeout(() => overlay.remove(), 300);
+                chrome.storage.sync.set({ releaf_hasSeenTutorial: true });
+                return;
+            }
+
+            const step = steps[index];
+
+            // Clean up previous
+            if (index > 0 && steps[index - 1].cleanup) steps[index - 1].cleanup();
+            if (index > 0 && steps[index - 1].target) steps[index - 1].target.classList.remove('releaf-highlight');
+
+            // Setup new step
+            card.innerHTML = `
+                <h3>${step.title}</h3>
+                <p>${step.text}</p>
+                <button class="releaf-tutorial-btn">${index === steps.length - 1 ? "Finish" : "Next"}</button>
+            `;
+
+            // Handle target highlight
+            if (step.target) {
+                step.target.classList.add('releaf-highlight');
+                // Ensure menu is visible if target is in it
+                if (getComputedStyle(bottomMenu).opacity === '0') {
+                    container.classList.remove('releaf-ui-hidden'); // Force UI show
+                }
+            }
+
+            // Run action if any
+            if (step.action) step.action();
+
+            // Bind button
+            card.querySelector('button').onclick = () => {
+                currentStep++;
+                showStep(currentStep);
+            };
+
+            // Show overlay
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+        };
+
+        // Start
+        showStep(0);
+    };
+
+    // Load settings & Check Tutorial
     const loadSettings = () => {
         chrome.storage.sync.get([
             'releaf_bg', 'releaf_text', 'releaf_accent', 'releaf_theme_id',
             'releaf_fontSize', 'releaf_lineHeight',
             'releaf_marginV', 'releaf_marginH',
-            'releaf_pageView'
+            'releaf_pageView',
+            'releaf_hasSeenTutorial'
         ], (items) => {
+            // ... [Existing settings application code] ... 
             if (items.releaf_bg) container.style.setProperty('--releaf-bg-rgb', items.releaf_bg);
             if (items.releaf_text) container.style.setProperty('--releaf-text-rgb', items.releaf_text);
             if (items.releaf_accent) container.style.setProperty('--releaf-accent-rgb', items.releaf_accent);
-            
+
             if (items.releaf_theme_id) {
                 settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
                 const activeSwatch = settingsPopup.querySelector(`.releaf-color-swatch[data-theme="${items.releaf_theme_id}"]`);
@@ -430,15 +524,20 @@ function enableReleaf() {
             }
 
             if (items.releaf_pageView) {
-                 settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
-                 const btn = settingsPopup.querySelector(`.releaf-page-view-btn[data-pages="${items.releaf_pageView}"]`);
-                 if (btn) btn.classList.add('active');
+                settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
+                const btn = settingsPopup.querySelector(`.releaf-page-view-btn[data-pages="${items.releaf_pageView}"]`);
+                if (btn) btn.classList.add('active');
 
-                 if (items.releaf_pageView === '2') {
-                     container.classList.add('releaf-2page');
-                 } else {
-                     container.classList.remove('releaf-2page');
-                 }
+                if (items.releaf_pageView === '2') {
+                    container.classList.add('releaf-2page');
+                } else {
+                    container.classList.remove('releaf-2page');
+                }
+            }
+
+            // Launch Tutorial if not seen
+            if (!items.releaf_hasSeenTutorial) {
+                setTimeout(launchTutorial, 500); // Slight delay for smooth entry
             }
         });
     };

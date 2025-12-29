@@ -151,27 +151,46 @@ describe('Re:Leaf Content Script', () => {
         }));
     });
 
-    test('Immersive mode hides UI after inactivity', () => {
+    test('Tutorial launches on first run', () => {
+        // Mock storage to return no settings (simulate first run)
+        chrome.storage.sync.get.mockImplementation((keys, callback) => callback({})); // Empty object
+        document.body.innerHTML = '<p>Content</p>';
+
         jest.useFakeTimers();
-        document.body.innerHTML = '<p>Test content for immersive mode</p>';
         enableReleaf();
-        const container = document.getElementById('releaf-container');
 
-        // Initially visible
-        expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+        // Fast-forward for tutorial delay
+        jest.advanceTimersByTime(500);
 
-        // Fast-forward time
-        jest.advanceTimersByTime(3000);
-
-        // Should be hidden
-        expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
-
-        // Simulate activity (mousemove)
-        document.dispatchEvent(new Event('mousemove'));
-
-        // Should be visible again
-        expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+        const overlay = document.querySelector('.releaf-tutorial-overlay');
+        expect(overlay).not.toBeNull();
+        expect(overlay.innerHTML).toContain('Welcome to Re:Leaf');
 
         jest.useRealTimers();
     });
 });
+
+test('Immersive mode hides UI after inactivity', () => {
+    jest.useFakeTimers();
+    document.body.innerHTML = '<p>Test content for immersive mode</p>';
+    enableReleaf();
+    const container = document.getElementById('releaf-container');
+
+    // Initially visible
+    expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+    // Fast-forward time
+    jest.advanceTimersByTime(3000);
+
+    // Should be hidden
+    expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
+
+    // Simulate activity (mousemove)
+    document.dispatchEvent(new Event('mousemove'));
+
+    // Should be visible again
+    expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+    jest.useRealTimers();
+});
+
