@@ -390,6 +390,64 @@ function enableReleaf() {
         }
     });
 
+    // Load saved settings
+    const loadSettings = () => {
+        chrome.storage.sync.get([
+            'releaf_bg', 'releaf_text', 'releaf_accent', 'releaf_theme_id',
+            'releaf_fontSize', 'releaf_lineHeight',
+            'releaf_marginV', 'releaf_marginH',
+            'releaf_pageView'
+        ], (items) => {
+            if (items.releaf_bg) container.style.setProperty('--releaf-bg-rgb', items.releaf_bg);
+            if (items.releaf_text) container.style.setProperty('--releaf-text-rgb', items.releaf_text);
+            if (items.releaf_accent) container.style.setProperty('--releaf-accent-rgb', items.releaf_accent);
+            
+            if (items.releaf_theme_id) {
+                settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
+                const activeSwatch = settingsPopup.querySelector(`.releaf-color-swatch[data-theme="${items.releaf_theme_id}"]`);
+                if (activeSwatch) activeSwatch.classList.add('active');
+            }
+
+            if (items.releaf_fontSize) {
+                container.style.setProperty('--releaf-font-size', `${items.releaf_fontSize}px`);
+                settingsPopup.querySelector('#releaf-font-size').value = items.releaf_fontSize;
+                currentFontSize = parseInt(items.releaf_fontSize);
+            }
+
+            if (items.releaf_lineHeight) {
+                container.style.setProperty('--releaf-line-height', items.releaf_lineHeight);
+                settingsPopup.querySelector('#releaf-line-height').value = items.releaf_lineHeight * 10;
+            }
+
+            if (items.releaf_marginV) {
+                container.style.setProperty('--releaf-margin-v', `${items.releaf_marginV}px`);
+                settingsPopup.querySelector('#releaf-margin-v').value = items.releaf_marginV;
+            }
+
+            if (items.releaf_marginH) {
+                container.style.setProperty('--releaf-margin-h', `${items.releaf_marginH}px`);
+                settingsPopup.querySelector('#releaf-margin-h').value = items.releaf_marginH;
+            }
+
+            if (items.releaf_pageView) {
+                 settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
+                 const btn = settingsPopup.querySelector(`.releaf-page-view-btn[data-pages="${items.releaf_pageView}"]`);
+                 if (btn) btn.classList.add('active');
+
+                 if (items.releaf_pageView === '2') {
+                     container.classList.add('releaf-2page');
+                 } else {
+                     container.classList.remove('releaf-2page');
+                 }
+            }
+        });
+    };
+
+    // Helper to save settings
+    const saveSetting = (key, value) => {
+        chrome.storage.sync.set({ [key]: value });
+    };
+
     // Wire up color swatches
     const themeColors = {
         light: { bg: '255, 255, 255', text: '34, 34, 34', accent: '234, 234, 234' },
@@ -411,24 +469,41 @@ function enableReleaf() {
             container.style.setProperty('--releaf-bg-rgb', colors.bg);
             container.style.setProperty('--releaf-text-rgb', colors.text);
             container.style.setProperty('--releaf-accent-rgb', colors.accent);
+
+            // Save theme
+            chrome.storage.sync.set({
+                releaf_bg: colors.bg,
+                releaf_text: colors.text,
+                releaf_accent: colors.accent,
+                releaf_theme_id: theme
+            });
         };
     });
 
     // Wire up sliders
     settingsPopup.querySelector('#releaf-font-size').oninput = (e) => {
-        container.style.setProperty('--releaf-font-size', `${e.target.value}px`);
+        const val = e.target.value;
+        container.style.setProperty('--releaf-font-size', `${val}px`);
+        currentFontSize = parseInt(val); // Update local var for A+/A- buttons
+        saveSetting('releaf_fontSize', val);
     };
 
     settingsPopup.querySelector('#releaf-line-height').oninput = (e) => {
-        container.style.setProperty('--releaf-line-height', (e.target.value / 10).toFixed(1));
+        const val = (e.target.value / 10).toFixed(1);
+        container.style.setProperty('--releaf-line-height', val);
+        saveSetting('releaf_lineHeight', val);
     };
 
     settingsPopup.querySelector('#releaf-margin-v').oninput = (e) => {
-        container.style.setProperty('--releaf-margin-v', `${e.target.value}px`);
+        const val = e.target.value;
+        container.style.setProperty('--releaf-margin-v', `${val}px`);
+        saveSetting('releaf_marginV', val);
     };
 
     settingsPopup.querySelector('#releaf-margin-h').oninput = (e) => {
-        container.style.setProperty('--releaf-margin-h', `${e.target.value}px`);
+        const val = e.target.value;
+        container.style.setProperty('--releaf-margin-h', `${val}px`);
+        saveSetting('releaf_marginH', val);
     };
 
     // Wire up page view buttons
@@ -445,8 +520,12 @@ function enableReleaf() {
             } else {
                 container.classList.remove('releaf-2page');
             }
+            saveSetting('releaf_pageView', pages);
         };
     });
+
+    // Load settings initially
+    loadSettings();
 
     // Page Counter
     const pageCounter = document.createElement("div");

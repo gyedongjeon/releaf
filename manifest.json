@@ -5,7 +5,8 @@
   "description": "Transform web pages into a clean, ebook-like reading view.",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "action": {
     "default_title": "Toggle Re:Leaf",

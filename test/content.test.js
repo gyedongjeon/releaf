@@ -9,6 +9,12 @@ global.chrome = {
             addListener: jest.fn(),
         },
     },
+    storage: {
+        sync: {
+            get: jest.fn((keys, callback) => callback({})), // Default empty
+            set: jest.fn(),
+        }
+    }
 };
 
 // Mock window.alert
@@ -118,6 +124,31 @@ describe('Re:Leaf Content Script', () => {
         toggleReleaf();
 
         expect(document.getElementById('releaf-container')).not.toBeNull();
+    });
+
+    test('Settings are saved to storage when changed', () => {
+        document.body.innerHTML = '<p>Content</p>'; // Ensure content exists
+        enableReleaf();
+        const container = document.getElementById('releaf-container');
+        const settingsBtn = container.querySelector('.releaf-btn[data-tooltip="Settings"]');
+
+        // Open settings (to select elements easily if needed, though mostly just ensures logic ran)
+        settingsBtn.click();
+
+        // Simulate changing font size slider
+        const fontSizeSlider = container.querySelector('#releaf-font-size');
+        fontSizeSlider.value = 24;
+        fontSizeSlider.dispatchEvent(new Event('input'));
+
+        expect(chrome.storage.sync.set).toHaveBeenCalledWith({ releaf_fontSize: "24" });
+
+        // Simulate theme change
+        const mintSwatch = container.querySelector('.releaf-swatch-mint');
+        mintSwatch.click();
+
+        expect(chrome.storage.sync.set).toHaveBeenCalledWith(expect.objectContaining({
+            releaf_theme_id: 'mint'
+        }));
     });
 
     test('Immersive mode hides UI after inactivity', () => {
