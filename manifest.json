@@ -23,5 +23,15 @@
   },
   "background": {
     "service_worker": "src/background.js"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/assets/logo.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }
