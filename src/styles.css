@@ -554,6 +554,16 @@
   margin: 0 0 12px 0;
   font-size: 18px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.releaf-tutorial-logo {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
 }
 
 .releaf-tutorial-card p {
