@@ -166,6 +166,10 @@ describe('Re:Leaf Content Script', () => {
         expect(overlay).not.toBeNull();
         expect(overlay.innerHTML).toContain('Welcome to Re:Leaf');
 
+        // Verify Checkbox exists
+        const checkbox = overlay.querySelector('#releaf-dont-show-again');
+        expect(checkbox).not.toBeNull();
+
         jest.useRealTimers();
     });
 });
