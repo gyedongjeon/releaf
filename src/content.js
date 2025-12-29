@@ -489,11 +489,6 @@ function enableReleaf() {
                     rightZone.className = 'releaf-zone-indicator releaf-zone-right';
                     rightZone.textContent = 'Next';
                     overlay.appendChild(rightZone);
-
-                    const centerZone = document.createElement('div');
-                    centerZone.className = 'releaf-zone-indicator releaf-zone-center';
-                    centerZone.textContent = 'Menu';
-                    overlay.appendChild(centerZone);
                 },
                 cleanup: () => {
                     overlay.querySelectorAll('.releaf-zone-indicator').forEach(el => el.remove());

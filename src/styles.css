@@ -564,7 +564,7 @@
 }
 
 .releaf-tutorial-card b {
-  color: #111;
+  color: inherit;
   font-weight: 700;
 }
 
