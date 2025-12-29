@@ -11,8 +11,10 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
         2.  **Settings**: Text instructions for customization.
         3.  **Exit**: Text instructions for closing.
     -   Added **"Don't show again"** checkbox.
-    -   **Branding**: Uses official extension logo (`icon-48.png`) in header instead of emoji.
+    -   **Branding**: Uses official extension logo (`src/assets/logo.png`) in header.
     -   Logic: Flag is saved ONLY IF user completes the tour OR explicitly checks "Don't show again".
+-   **Manifest**:
+    -   Added `web_accessible_resources` to allow loading the logo in the content script.
 -   **Styles**:
     -   Added dark overlay and card styles (zIndex 9999).
     -   Improved text contrast (Bold color inherits from parent).
@@ -25,4 +27,4 @@ Adds a first-run tutorial overlay to guide new users through the extension's fea
 -   [x] Tutorial appears on first run.
 -   [x] User can opt-out via checkbox.
 -   [x] "Prev/Next" zones are clearly visible.
--   [x] Branding uses official logo.
+-   [x] Branding uses official logo (Fixed 404 error).
