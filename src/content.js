@@ -47,7 +47,7 @@ function extractContent() {
         '#article_txt', '.article_txt', // Donga
         'article', 'main', '#content', '#main', '#bodyContent',
         '.main-content', '.post-content', '.article-content',
-        '.main-content', '.post-content', '.article-content',
+
         '.entry-content', '#story-body',
         // Generic wrappers often used when semantic tags are missing
         '.content', '#content-area', '.page-content',
@@ -67,6 +67,43 @@ function extractContent() {
             break;
         }
     }
+
+    // 1.5 Text Density Fallback
+    // If no explicit selector matched, find the element with the highest text density.
+    if (!article) {
+        const blocks = document.body.querySelectorAll('div, section, article, main');
+        let maxScore = 0;
+        let bestBlock = null;
+
+        blocks.forEach(block => {
+            // Skip hidden elements (simple check)
+            if (block.offsetParent === null) return;
+
+            const text = block.innerText || block.textContent || '';
+            const textLen = text.length;
+            if (textLen < 200) return; // Ignore small blocks
+
+            // Calculate Link Density
+            const links = block.querySelectorAll('a');
+            let linkLen = 0;
+            links.forEach(l => linkLen += (l.innerText || l.textContent || '').length);
+
+            // Score: Text Length penalized by Link Density
+            // If 50% of text is links (nav/footer), score is 0.
+            const linkDensity = linkLen / Math.max(1, textLen);
+            const score = textLen * (1 - linkDensity * 2);
+
+            if (score > maxScore) {
+                maxScore = score;
+                bestBlock = block;
+            }
+        });
+
+        if (bestBlock) {
+            article = bestBlock;
+        }
+    }
+
     // Fallback if nothing passed the length check
     if (!article) {
         article = document.querySelector('article') || document.body;
