@@ -28,8 +28,6 @@ function toggleReleaf() {
         clearTimeout(idleTimer);
         existingContainer.remove();
         document.body.style.overflow = ""; // Restore scrolling
-        existingContainer.remove();
-        document.body.style.overflow = ""; // Restore scrolling
     } else {
         // If inactive, activate it
         enableReleaf();
@@ -40,30 +38,104 @@ function toggleReleaf() {
  * Extracts content from the page, preserving structure.
  * @returns {string} HTML string of the extracted content
  */
-/**
- * Extracts content from the page, preserving structure.
- * @returns {string} HTML string of the extracted content
- */
 function extractContent() {
     // 1. Selector Candidates
     // specific IDs often used for main content > semantic tags > fallback
     // Added '#dic_area' for Naver News support
     const candidates = [
         '#dic_area', '.newsct_article', // Naver News
+        '#article_txt', '.article_txt', // Donga
         'article', 'main', '#content', '#main', '#bodyContent',
         '.main-content', '.post-content', '.article-content',
-        '.entry-content', '#story-body'
+
+        '.entry-content', '#story-body',
+        // Generic wrappers often used when semantic tags are missing
+        '.content', '#content-area', '.page-content',
+        '[role="main"]', '.post-body', '.report-content',
+        '.document-body', '#report-body'
     ];
 
     let article = null;
     for (const selector of candidates) {
-        article = document.querySelector(selector);
-        if (article) break;
+        const found = document.querySelector(selector);
+        // Heuristic: Content must be of substantial length to be the "main" article
+        // This prevents selecting a tiny <article> tag that only contains a byline.
+        // Use textContent as fallback for JSDOM compatibility
+        const textLength = found ? (found.innerText || found.textContent || '').length : 0;
+        if (found && textLength > 200) {
+            article = found;
+            break;
+        }
     }
-    article = article || document.body;
+
+    // 1.5 Text Density Fallback
+    // If no explicit selector matched, find the element with the highest text density.
+    if (!article) {
+        const blocks = document.body.querySelectorAll('div, section, article, main');
+        let maxScore = 0;
+        let bestBlock = null;
+
+        blocks.forEach(block => {
+            // Skip hidden elements (simple check)
+            if (block.offsetParent === null) return;
+
+            const text = block.innerText || block.textContent || '';
+            const textLen = text.length;
+            if (textLen < 200) return; // Ignore small blocks
+
+            // Calculate Link Density
+            const links = block.querySelectorAll('a');
+            let linkLen = 0;
+            links.forEach(l => linkLen += (l.innerText || l.textContent || '').length);
+
+            // Score: Text Length penalized by Link Density
+            // If 50% of text is links (nav/footer), score is 0.
+            const linkDensity = linkLen / Math.max(1, textLen);
+            const score = textLen * (1 - linkDensity * 2);
+
+            if (score > maxScore) {
+                maxScore = score;
+                bestBlock = block;
+            }
+        });
+
+        if (bestBlock) {
+            article = bestBlock;
+        }
+    }
+
+    // Fallback if nothing passed the length check
+    if (!article) {
+        article = document.querySelector('article') || document.body;
+    }
 
     // 2. Clone to manipulate safely
     const clone = article.cloneNode(true);
+
+    // 2.1 Remove Hidden Elements (Fix for duplicate content)
+    // Some sites have duplicate content (e.g., mobile vs desktop versions) where one is hidden via display:none.
+    // Since we strip classes/styles later, we must remove these hidden elements now based on the ORIGINAL DOM.
+    if (article.querySelectorAll) {
+        const originals = article.querySelectorAll('*');
+        const clones = clone.querySelectorAll('*');
+
+        // Iterate backwards to safely remove children without affecting indices of future iterations 
+        // (though querySelectorAll is static, removing parents first is more efficient/logical?) 
+        // Actually, forward iteration is fine because clones NodeList is static snapshot.
+        for (let i = 0; i < originals.length; i++) {
+            const original = originals[i];
+
+            // Check if element is hidden
+            // offsetParent is null if display: none (or parent is display: none)
+            if (original.offsetParent === null && original.tagName !== 'SCRIPT' && original.tagName !== 'STYLE') {
+                // Remove corresponding clone
+                // Check if it's already removed (via parent removal)
+                if (clones[i].parentNode) {
+                    clones[i].remove();
+                }
+            }
+        }
+    }
 
     // 3. Remove Unwanted Elements (Noise)
     const unwantedSelectors = [
@@ -75,7 +147,33 @@ function extractContent() {
         '.sidebar', '#sidebar', '.menu', '#menu', '.nav', '.navigation', '.toc', '#toc',
         '.language-list', '.interlanguage-link', '#p-lang',
         '.ad', '.advertisement', '.social-share', '.share-buttons',
-        '.related-posts', '.comments', '#comments', '.meta', '.author-bio'
+        '.related-posts', '.comments', '#comments', '.meta', '.author-bio',
+        // Daum/Naver specific noise
+        '.layer_util', '.box_setting', '.util_view', '.wrap_util',
+        '.box_layer', '.img_mask', '.btn_util',
+        // Daum/Naver Footers & Related
+        '.foot_view', '.box_recommend', '.txt_copyright', '.box_etc',
+        '#foot_view', '.kakao_ad', '.art_copy',
+        // Donga specific noise
+        '.article_foot', '.article_copy', '.article_relation', '.article_sns',
+        '.article_issue', '.article_related', '.article_reporter',
+        '.copyright', '.copy_txt', '.relation_list', '.link_news',
+        // OhmyNews / Generic news portal noise
+        '.article_reaction', '.reaction_wrap', '.poll_wrap', '.survey_wrap',
+        '.news_reaction', '.article_poll', '.article_survey',
+        '[class*="reaction"]', '[class*="poll"]', '[class*="survey"]',
+        // Reporter contact / email sections
+        '.reporter_info', '.writer_info', '.byline_info', '.journalist',
+        '[class*="reporter"]', '[class*="journalist"]', '[class*="byline"]',
+        // Related news lists (various portals)
+        '.related_news', '.news_list', '.article_list', '.more_news',
+        '[class*="news_list"]', '[class*="article_list"]',
+        // Tags and keywords
+        '.tags', '.tag', '.keywords', '.article_tags', '.view_tag',
+        '[class*="tag"]', '[class*="keyword"]',
+        // Generic footer patterns
+        '[class*="copyright"]', '[class*="footer"]', '[class*="related"]',
+        '[id*="copyright"]', '[id*="footer"]', '[id*="related"]'
     ];
 
     // Safety check: Don't remove if the article IS one of these (unlikely but possible with poor semantics)
@@ -91,10 +189,10 @@ function extractContent() {
         const el = currentNode;
         currentNode = walk.nextNode(); // Advance pointer before modification
 
-        // 4.1 Remove all attributes except "src", "href", "alt"
+        // 4.1 Remove all attributes except "src", "href", "alt", "data-src", "data-original"
         const attrs = [...el.attributes];
         attrs.forEach(attr => {
-            if (!['src', 'href', 'alt', 'title', 'rowspan', 'colspan'].includes(attr.name)) {
+            if (!['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original'].includes(attr.name)) {
                 el.removeAttribute(attr.name);
             }
         });
@@ -233,18 +331,64 @@ function enableReleaf() {
         return Math.round(visibleContentWidth + columnGap);
     };
 
+    /**
+     * Sets the scroll position, utilizing CSS transform for overscroll if necessary.
+     * This fixes the "empty column" issue by visually shifting the last page into view
+     * even if the scroll container doesn't technically allow scrolling that far.
+     * @param {number} targetScrollLeft - The desired scrollLeft position
+     */
+    const setScrollPosition = (targetScrollLeft) => {
+        content.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+
+        // Check if we hit the scroll limit and need to overscroll visually
+        // We use a small timeout to let the smooth scroll start/finish or checking immediately?
+        // Checking immediately is better for setting the transform, but the browser might clamp .scrollTo immediately.
+
+        // Wait a macro-tick for the scroll to be clamped by the browser
+        setTimeout(() => {
+            const maxScroll = content.scrollWidth - content.clientWidth;
+
+            // If we wanted to go further than allowed (with a small buffer for rounding)
+            if (targetScrollLeft > maxScroll + 5) {
+                const overscrollAmount = targetScrollLeft - maxScroll;
+                // Apply transform to shift content left
+                content.style.transform = `translateX(-${overscrollAmount}px)`;
+            } else {
+                // Reset transform if within bounds
+                content.style.transform = 'translateX(0)';
+            }
+        }, 0);
+    };
+
+    const getTotalPages = () => {
+        const pageWidth = getPageWidth();
+        const totalWidth = content.scrollWidth;
+        // Calculate pages (add small buffer for rounding errors)
+        return Math.max(1, Math.ceil((totalWidth - 10) / pageWidth));
+    };
+
     const goToPrevPage = () => {
         const pageWidth = getPageWidth();
-        const currentScroll = content.scrollLeft;
-        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+        const currentVirtualScroll = getVirtualScroll(content);
+        const targetPage = Math.max(0, Math.floor((currentVirtualScroll - 10) / pageWidth));
+        setScrollPosition(targetPage * pageWidth);
     };
 
     const goToNextPage = () => {
         const pageWidth = getPageWidth();
-        const currentScroll = content.scrollLeft;
-        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+        const currentVirtualScroll = getVirtualScroll(content);
+        // Calculate next page position aligned to page width
+        const targetPage = Math.floor((currentVirtualScroll + 10) / pageWidth) + 1;
+
+        // Prevent scrolling past the last page
+        if (targetPage >= getTotalPages()) {
+            // Optional: Bounce effect or just return
+            return;
+        }
+
+        const targetScroll = targetPage * pageWidth;
+
+        setScrollPosition(targetScroll);
     };
 
     const toggleMenu = () => {
@@ -411,24 +555,41 @@ function enableReleaf() {
             container.style.setProperty('--releaf-bg-rgb', colors.bg);
             container.style.setProperty('--releaf-text-rgb', colors.text);
             container.style.setProperty('--releaf-accent-rgb', colors.accent);
+
+            // Save theme
+            chrome.storage.sync.set({
+                releaf_bg: colors.bg,
+                releaf_text: colors.text,
+                releaf_accent: colors.accent,
+                releaf_theme_id: theme
+            });
         };
     });
 
     // Wire up sliders
     settingsPopup.querySelector('#releaf-font-size').oninput = (e) => {
-        container.style.setProperty('--releaf-font-size', `${e.target.value}px`);
+        const val = e.target.value;
+        container.style.setProperty('--releaf-font-size', `${val}px`);
+        currentFontSize = parseInt(val); // Update local var for A+/A- buttons
+        saveSetting('releaf_fontSize', val);
     };
 
     settingsPopup.querySelector('#releaf-line-height').oninput = (e) => {
-        container.style.setProperty('--releaf-line-height', (e.target.value / 10).toFixed(1));
+        const val = (e.target.value / 10).toFixed(1);
+        container.style.setProperty('--releaf-line-height', val);
+        saveSetting('releaf_lineHeight', val);
     };
 
     settingsPopup.querySelector('#releaf-margin-v').oninput = (e) => {
-        container.style.setProperty('--releaf-margin-v', `${e.target.value}px`);
+        const val = e.target.value;
+        container.style.setProperty('--releaf-margin-v', `${val}px`);
+        saveSetting('releaf_marginV', val);
     };
 
     settingsPopup.querySelector('#releaf-margin-h').oninput = (e) => {
-        container.style.setProperty('--releaf-margin-h', `${e.target.value}px`);
+        const val = e.target.value;
+        container.style.setProperty('--releaf-margin-h', `${val}px`);
+        saveSetting('releaf_marginH', val);
     };
 
     // Wire up page view buttons
@@ -445,43 +606,246 @@ function enableReleaf() {
             } else {
                 container.classList.remove('releaf-2page');
             }
+            saveSetting('releaf_pageView', pages);
         };
     });
+
+    // Tutorial Logic
+    const launchTutorial = () => {
+        // Create Overlay
+        const overlay = document.createElement("div");
+        overlay.className = "releaf-tutorial-overlay";
+
+        const card = document.createElement("div");
+        card.className = "releaf-tutorial-card";
+        // Relative position for close button
+        card.style.position = 'relative';
+        overlay.appendChild(card);
+        container.appendChild(overlay);
+
+        let currentStep = 0;
+        const steps = [
+            {
+                title: `Welcome to Re:Leaf! <img src="${chrome.runtime.getURL('src/assets/logo.png')}" class="releaf-tutorial-logo" alt="Leaf Logo"/>`,
+                text: "Tap <b>Left/Right</b> to turn pages.<br>Tap <b>Center</b> to show the menu.",
+                action: () => {
+                    // Show zone indicators
+                    const leftZone = document.createElement('div');
+                    leftZone.className = 'releaf-zone-indicator releaf-zone-left';
+                    leftZone.textContent = 'Prev';
+                    overlay.appendChild(leftZone);
+
+                    const rightZone = document.createElement('div');
+                    rightZone.className = 'releaf-zone-indicator releaf-zone-right';
+                    rightZone.textContent = 'Next';
+                    overlay.appendChild(rightZone);
+                },
+                cleanup: () => {
+                    overlay.querySelectorAll('.releaf-zone-indicator').forEach(el => el.remove());
+                }
+            },
+            {
+                title: "Customization",
+                text: "Click the <b>Settings Gear</b> to change themes, font size, and spacing."
+            },
+            {
+                title: "Finished Reading?",
+                text: "Click the <b>Close Button</b> or press <b>Escape</b> to return to the original page."
+            }
+        ];
+
+        const closeTutorial = (finished = false) => {
+            const dontShowAgain = card.querySelector('#releaf-dont-show-again')?.checked;
+
+            // Save if finished OR if user explicitly checked "Don't show again"
+            if (finished || dontShowAgain) {
+                chrome.storage.sync.set({ releaf_hasSeenTutorial: true });
+            }
+
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        const showStep = (index) => {
+            if (index >= steps.length) {
+                closeTutorial(true);
+                return;
+            }
+
+            const step = steps[index];
+
+            // Clean up previous
+            if (index > 0 && steps[index - 1].cleanup) steps[index - 1].cleanup();
+            if (index > 0 && steps[index - 1].target) steps[index - 1].target.classList.remove('releaf-highlight');
+
+            // Setup new step
+            const isLast = index === steps.length - 1;
+            card.innerHTML = `
+                <button class="releaf-tutorial-close" title="Close">×</button>
+                <h3>${step.title}</h3>
+                <p>${step.text}</p>
+                <div class="releaf-tutorial-footer">
+                    <label class="releaf-tutorial-checkbox">
+                        <input type="checkbox" id="releaf-dont-show-again">
+                        Don't show again
+                    </label>
+                    <button class="releaf-tutorial-btn">${isLast ? "All Done!" : "Next"}</button>
+                </div>
+            `;
+
+            // Handle target highlight
+            if (step.target) {
+                step.target.classList.add('releaf-highlight');
+
+                // FORCE SHOW UI: Remove immersive hide AND add menu visible class
+                container.classList.remove('releaf-ui-hidden');
+                container.classList.add('releaf-menu-visible');
+            }
+
+            // Run action if any
+            if (step.action) step.action();
+
+            // Bind Next/Finish button
+            card.querySelector('.releaf-tutorial-btn').onclick = () => {
+                currentStep++;
+                showStep(currentStep);
+            };
+
+            // Bind Close button
+            card.querySelector('.releaf-tutorial-close').onclick = () => closeTutorial(false);
+
+            // Show overlay
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+        };
+
+        // Start
+        showStep(0);
+    };
+
+    // Load settings & Check Tutorial
+    const loadSettings = () => {
+        chrome.storage.sync.get([
+            'releaf_bg', 'releaf_text', 'releaf_accent', 'releaf_theme_id',
+            'releaf_fontSize', 'releaf_lineHeight',
+            'releaf_marginV', 'releaf_marginH',
+            'releaf_pageView',
+            'releaf_hasSeenTutorial'
+        ], (items) => {
+            if (items.releaf_bg) container.style.setProperty('--releaf-bg-rgb', items.releaf_bg);
+            if (items.releaf_text) container.style.setProperty('--releaf-text-rgb', items.releaf_text);
+            if (items.releaf_accent) container.style.setProperty('--releaf-accent-rgb', items.releaf_accent);
+
+            if (items.releaf_theme_id) {
+                settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
+                const activeSwatch = settingsPopup.querySelector(`.releaf-color-swatch[data-theme="${items.releaf_theme_id}"]`);
+                if (activeSwatch) activeSwatch.classList.add('active');
+            }
+
+            if (items.releaf_fontSize) {
+                container.style.setProperty('--releaf-font-size', `${items.releaf_fontSize}px`);
+                settingsPopup.querySelector('#releaf-font-size').value = items.releaf_fontSize;
+                currentFontSize = parseInt(items.releaf_fontSize);
+            }
+
+            if (items.releaf_lineHeight) {
+                container.style.setProperty('--releaf-line-height', items.releaf_lineHeight);
+                settingsPopup.querySelector('#releaf-line-height').value = items.releaf_lineHeight * 10;
+            }
+
+            if (items.releaf_marginV) {
+                container.style.setProperty('--releaf-margin-v', `${items.releaf_marginV}px`);
+                settingsPopup.querySelector('#releaf-margin-v').value = items.releaf_marginV;
+            }
+
+            if (items.releaf_marginH) {
+                container.style.setProperty('--releaf-margin-h', `${items.releaf_marginH}px`);
+                settingsPopup.querySelector('#releaf-margin-h').value = items.releaf_marginH;
+            }
+
+            if (items.releaf_pageView) {
+                settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
+                const btn = settingsPopup.querySelector(`.releaf-page-view-btn[data-pages="${items.releaf_pageView}"]`);
+                if (btn) btn.classList.add('active');
+
+                if (items.releaf_pageView === '2') {
+                    container.classList.add('releaf-2page');
+                } else {
+                    container.classList.remove('releaf-2page');
+                }
+            }
+
+            // Launch Tutorial if not seen
+            if (!items.releaf_hasSeenTutorial) {
+                setTimeout(launchTutorial, 500); // Slight delay for smooth entry
+            }
+        });
+    };
+
+    // Helper to save settings
+    const saveSetting = (key, value) => {
+        chrome.storage.sync.set({ [key]: value });
+    };
+
+    // Load settings initially
+    loadSettings();
 
     // Page Counter
     const pageCounter = document.createElement("div");
     pageCounter.className = "releaf-page-counter";
     pageCounter.textContent = "1 / 1"; // Initial state
 
+    // Logic to enforce strict column widths
+    const updateLayout = () => {
+        const hMargin = currentMarginH || 40;
+        const availableWidth = window.innerWidth - (hMargin * 2);
+
+        // Match CSS calc: gap is fixed at 60px
+        const gap = 60;
+        const colWidth = (availableWidth - gap) / 2;
+
+        // Set the variable that CSS will use for column-width
+        container.style.setProperty('--releaf-column-width', `${colWidth}px`);
+    };
+
     // Update page counter function
     const updatePageCount = () => {
         const pageWidth = getPageWidth();
-        const totalWidth = content.scrollWidth;
-        const currentScroll = content.scrollLeft;
+        const currentVirtualScroll = getVirtualScroll(content);
 
         // Calculate pages (add small buffer for rounding errors)
-        const totalPages = Math.max(1, Math.ceil((totalWidth - 10) / pageWidth));
-        const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentScroll + 10) / pageWidth) + 1));
+        const totalPages = getTotalPages();
+        const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentVirtualScroll + 10) / pageWidth) + 1));
 
         pageCounter.textContent = `${currentPage} / ${totalPages}`;
-
-        // Update range input if we had a progress slider
-        // But for now just text
     };
 
-    // Update on scroll and resize
+    // Update on scroll (only update text)
     content.addEventListener('scroll', () => {
-        // Debounce slightly for performance? No need for simple text update
         window.requestAnimationFrame(updatePageCount);
     });
-    window.addEventListener('resize', updatePageCount);
 
-    // Also update when settings change (font size, margins etc)
-    const observer = new MutationObserver(updatePageCount);
+    // Update layout AND text on resize
+    window.addEventListener('resize', () => {
+        updateLayout();
+        updatePageCount();
+    });
+
+    // Also update when settings change (font size, margins, view mode etc)
+    const observer = new MutationObserver(() => {
+        // Refresh local margin variable if needed
+        const valH = container.style.getPropertyValue('--releaf-margin-h');
+        if (valH) currentMarginH = parseInt(valH);
+
+        updateLayout();
+        updatePageCount();
+    });
     observer.observe(container, { attributes: true, attributeFilter: ['style', 'class'] });
 
     // Initial update after layout
-    setTimeout(updatePageCount, 100);
+    setTimeout(() => {
+        updateLayout();
+        updatePageCount();
+    }, 100);
 
     // Tooltip Helper
     const showTooltip = (target, text) => {
@@ -559,6 +923,32 @@ function handleUserActivity(e) {
 
 // Listeners are now added in enableReleaf and removed in toggleReleaf
 
+// Helper to manage scroll + visual overscroll
+function setScrollPosition(content, targetScrollLeft) {
+    content.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+
+    // Wait for browser clamping (macro-tick)
+    setTimeout(() => {
+        const maxScroll = content.scrollWidth - content.clientWidth;
+
+        // If target is beyond max scrollable area, apply transform
+        if (targetScrollLeft > maxScroll + 2) { // 2px buffer
+            const overscrollAmount = targetScrollLeft - maxScroll;
+            content.style.transform = `translateX(-${overscrollAmount}px)`;
+        } else {
+            content.style.transform = 'translateX(0)';
+        }
+    }, 0);
+}
+
+// Helper to get virtual scroll position (scroll + transform)
+function getVirtualScroll(content) {
+    const currentScroll = content.scrollLeft;
+    const transformMatch = content.style.transform.match(/translateX\(-?([\d.]+)px\)/);
+    const visualOffset = transformMatch ? parseFloat(transformMatch[1]) : 0;
+    return currentScroll + visualOffset;
+}
+
 let resizeTimeout;
 function handleResize() {
     // Debounce resize handling
@@ -569,13 +959,10 @@ function handleResize() {
 
         // Snap to the nearest page
         const pageWidth = window.innerWidth;
-        const currentScroll = content.scrollLeft;
-        const pageIndex = Math.round(currentScroll / pageWidth);
+        const currentVirtualScroll = getVirtualScroll(content);
+        const pageIndex = Math.round(currentVirtualScroll / pageWidth);
 
-        content.scrollTo({
-            left: pageIndex * pageWidth,
-            behavior: 'smooth'
-        });
+        setScrollPosition(content, pageIndex * pageWidth);
     }, 100);
 }
 
@@ -586,13 +973,20 @@ function handleKeyNavigation(e) {
     const pageWidth = window.innerWidth;
 
     if (e.key === 'ArrowRight') {
-        const currentScroll = content.scrollLeft;
-        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+        const currentVirtualScroll = getVirtualScroll(content);
+        const targetPage = Math.floor((currentVirtualScroll + 10) / pageWidth) + 1;
+
+        // Calculate total pages to prevent overflow
+        // Use logic similar to internal helper
+        const totalPages = Math.max(1, Math.ceil((content.scrollWidth - 10) / pageWidth));
+
+        if (targetPage >= totalPages) return;
+
+        setScrollPosition(content, targetPage * pageWidth);
     } else if (e.key === 'ArrowLeft') {
-        const currentScroll = content.scrollLeft;
-        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+        const currentVirtualScroll = getVirtualScroll(content);
+        const targetPage = Math.max(0, Math.floor((currentVirtualScroll - 10) / pageWidth));
+        setScrollPosition(content, targetPage * pageWidth);
     } else if (e.key === 'Escape') {
         toggleReleaf();
     }
