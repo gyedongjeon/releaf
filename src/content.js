@@ -112,6 +112,31 @@ function extractContent() {
     // 2. Clone to manipulate safely
     const clone = article.cloneNode(true);
 
+    // 2.1 Remove Hidden Elements (Fix for duplicate content)
+    // Some sites have duplicate content (e.g., mobile vs desktop versions) where one is hidden via display:none.
+    // Since we strip classes/styles later, we must remove these hidden elements now based on the ORIGINAL DOM.
+    if (article.querySelectorAll) {
+        const originals = article.querySelectorAll('*');
+        const clones = clone.querySelectorAll('*');
+
+        // Iterate backwards to safely remove children without affecting indices of future iterations 
+        // (though querySelectorAll is static, removing parents first is more efficient/logical?) 
+        // Actually, forward iteration is fine because clones NodeList is static snapshot.
+        for (let i = 0; i < originals.length; i++) {
+            const original = originals[i];
+
+            // Check if element is hidden
+            // offsetParent is null if display: none (or parent is display: none)
+            if (original.offsetParent === null && original.tagName !== 'SCRIPT' && original.tagName !== 'STYLE') {
+                // Remove corresponding clone
+                // Check if it's already removed (via parent removal)
+                if (clones[i].parentNode) {
+                    clones[i].remove();
+                }
+            }
+        }
+    }
+
     // 3. Remove Unwanted Elements (Noise)
     const unwantedSelectors = [
         'script', 'style', 'noscript', 'iframe', 'form', 'button', 'input', 'textarea',
@@ -306,22 +331,67 @@ function enableReleaf() {
         return Math.round(visibleContentWidth + columnGap);
     };
 
+    /**
+     * Sets the scroll position, utilizing CSS transform for overscroll if necessary.
+     * This fixes the "empty column" issue by visually shifting the last page into view
+     * even if the scroll container doesn't technically allow scrolling that far.
+     * @param {number} targetScrollLeft - The desired scrollLeft position
+     */
+    const setScrollPosition = (targetScrollLeft) => {
+        content.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+
+        // Check if we hit the scroll limit and need to overscroll visually
+        // We use a small timeout to let the smooth scroll start/finish or checking immediately?
+        // Checking immediately is better for setting the transform, but the browser might clamp .scrollTo immediately.
+
+        // Wait a macro-tick for the scroll to be clamped by the browser
+        setTimeout(() => {
+            const maxScroll = content.scrollWidth - content.clientWidth;
+
+            // If we wanted to go further than allowed (with a small buffer for rounding)
+            if (targetScrollLeft > maxScroll + 5) {
+                const overscrollAmount = targetScrollLeft - maxScroll;
+                // Apply transform to shift content left
+                content.style.transform = `translateX(-${overscrollAmount}px)`;
+            } else {
+                // Reset transform if within bounds
+                content.style.transform = 'translateX(0)';
+            }
+        }, 0);
+    };
+
     const goToPrevPage = () => {
         const pageWidth = getPageWidth();
+
+        // Include current visual offset in calculation
+        // If we are transformed, our "virtual" scroll is scrollLeft + transform
+        // But simpler: just calculate based on current snapped page index
         const currentScroll = content.scrollLeft;
-        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+
+        // If transformed, we are technically at maxScroll visually designated as a higher page.
+        // Recover "virtual" current scroll:
+        const transformMatch = content.style.transform.match(/translateX\(-?([\d.]+)px\)/);
+        const visualOffset = transformMatch ? parseFloat(transformMatch[1]) : 0;
+        const virtualScroll = currentScroll + visualOffset;
+
+        const targetPage = Math.max(0, Math.floor((virtualScroll - 10) / pageWidth));
+
+        setScrollPosition(targetPage * pageWidth);
     };
 
     const goToNextPage = () => {
         const pageWidth = getPageWidth();
         const currentScroll = content.scrollLeft;
 
+        const transformMatch = content.style.transform.match(/translateX\(-?([\d.]+)px\)/);
+        const visualOffset = transformMatch ? parseFloat(transformMatch[1]) : 0;
+        const virtualScroll = currentScroll + visualOffset;
+
         // Calculate next page position aligned to page width
-        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
+        const targetPage = Math.floor((virtualScroll + 10) / pageWidth) + 1;
         const targetScroll = targetPage * pageWidth;
 
-        content.scrollTo({ left: targetScroll, behavior: 'smooth' });
+        setScrollPosition(targetScroll);
     };
 
     const toggleMenu = () => {
@@ -727,35 +797,59 @@ function enableReleaf() {
     pageCounter.className = "releaf-page-counter";
     pageCounter.textContent = "1 / 1"; // Initial state
 
+    // Logic to enforce strict column widths
+    const updateLayout = () => {
+        const hMargin = currentMarginH || 40;
+        const availableWidth = window.innerWidth - (hMargin * 2);
+
+        // Match CSS calc: gap is fixed at 60px
+        const gap = 60;
+        const colWidth = (availableWidth - gap) / 2;
+
+        // Set the variable that CSS will use for column-width
+        container.style.setProperty('--releaf-column-width', `${colWidth}px`);
+    };
+
     // Update page counter function
     const updatePageCount = () => {
         const pageWidth = getPageWidth();
         const totalWidth = content.scrollWidth;
-        const currentScroll = content.scrollLeft;
+        const currentVirtualScroll = getVirtualScroll(content);
 
         // Calculate pages (add small buffer for rounding errors)
         const totalPages = Math.max(1, Math.ceil((totalWidth - 10) / pageWidth));
-        const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentScroll + 10) / pageWidth) + 1));
+        const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentVirtualScroll + 10) / pageWidth) + 1));
 
         pageCounter.textContent = `${currentPage} / ${totalPages}`;
-
-        // Update range input if we had a progress slider
-        // But for now just text
     };
 
-    // Update on scroll and resize
+    // Update on scroll (only update text)
     content.addEventListener('scroll', () => {
-        // Debounce slightly for performance? No need for simple text update
         window.requestAnimationFrame(updatePageCount);
     });
-    window.addEventListener('resize', updatePageCount);
 
-    // Also update when settings change (font size, margins etc)
-    const observer = new MutationObserver(updatePageCount);
+    // Update layout AND text on resize
+    window.addEventListener('resize', () => {
+        updateLayout();
+        updatePageCount();
+    });
+
+    // Also update when settings change (font size, margins, view mode etc)
+    const observer = new MutationObserver(() => {
+        // Refresh local margin variable if needed
+        const valH = container.style.getPropertyValue('--releaf-margin-h');
+        if (valH) currentMarginH = parseInt(valH);
+
+        updateLayout();
+        updatePageCount();
+    });
     observer.observe(container, { attributes: true, attributeFilter: ['style', 'class'] });
 
     // Initial update after layout
-    setTimeout(updatePageCount, 100);
+    setTimeout(() => {
+        updateLayout();
+        updatePageCount();
+    }, 100);
 
     // Tooltip Helper
     const showTooltip = (target, text) => {
@@ -833,6 +927,32 @@ function handleUserActivity(e) {
 
 // Listeners are now added in enableReleaf and removed in toggleReleaf
 
+// Helper to manage scroll + visual overscroll
+function setScrollPosition(content, targetScrollLeft) {
+    content.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+
+    // Wait for browser clamping (macro-tick)
+    setTimeout(() => {
+        const maxScroll = content.scrollWidth - content.clientWidth;
+
+        // If target is beyond max scrollable area, apply transform
+        if (targetScrollLeft > maxScroll + 2) { // 2px buffer
+            const overscrollAmount = targetScrollLeft - maxScroll;
+            content.style.transform = `translateX(-${overscrollAmount}px)`;
+        } else {
+            content.style.transform = 'translateX(0)';
+        }
+    }, 0);
+}
+
+// Helper to get virtual scroll position (scroll + transform)
+function getVirtualScroll(content) {
+    const currentScroll = content.scrollLeft;
+    const transformMatch = content.style.transform.match(/translateX\(-?([\d.]+)px\)/);
+    const visualOffset = transformMatch ? parseFloat(transformMatch[1]) : 0;
+    return currentScroll + visualOffset;
+}
+
 let resizeTimeout;
 function handleResize() {
     // Debounce resize handling
@@ -843,13 +963,10 @@ function handleResize() {
 
         // Snap to the nearest page
         const pageWidth = window.innerWidth;
-        const currentScroll = content.scrollLeft;
-        const pageIndex = Math.round(currentScroll / pageWidth);
+        const currentVirtualScroll = getVirtualScroll(content);
+        const pageIndex = Math.round(currentVirtualScroll / pageWidth);
 
-        content.scrollTo({
-            left: pageIndex * pageWidth,
-            behavior: 'smooth'
-        });
+        setScrollPosition(content, pageIndex * pageWidth);
     }, 100);
 }
 
@@ -860,13 +977,13 @@ function handleKeyNavigation(e) {
     const pageWidth = window.innerWidth;
 
     if (e.key === 'ArrowRight') {
-        const currentScroll = content.scrollLeft;
-        const targetPage = Math.floor((currentScroll + 10) / pageWidth) + 1;
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+        const currentVirtualScroll = getVirtualScroll(content);
+        const targetPage = Math.floor((currentVirtualScroll + 10) / pageWidth) + 1;
+        setScrollPosition(content, targetPage * pageWidth);
     } else if (e.key === 'ArrowLeft') {
-        const currentScroll = content.scrollLeft;
-        const targetPage = Math.max(0, Math.floor((currentScroll - 10) / pageWidth));
-        content.scrollTo({ left: targetPage * pageWidth, behavior: 'smooth' });
+        const currentVirtualScroll = getVirtualScroll(content);
+        const targetPage = Math.max(0, Math.floor((currentVirtualScroll - 10) / pageWidth));
+        setScrollPosition(content, targetPage * pageWidth);
     } else if (e.key === 'Escape') {
         toggleReleaf();
     }
