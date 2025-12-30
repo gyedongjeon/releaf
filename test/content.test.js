@@ -59,6 +59,19 @@ describe('Re:Leaf Content Script', () => {
             expect(content.innerHTML).toContain('Naver news content body');
         });
 
+        test('Should extract content from generic wrapper (.content or [role="main"])', () => {
+            setupContent(`
+                <div class="content" role="main">
+                    <h3>Generic Report Title</h3>
+                    <p>This is a report body that lacks semantic tags like article or main.</p>
+                </div>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.innerHTML).toContain('Generic Report Title');
+            expect(content.innerHTML).toContain('report body');
+        });
+
         test('Should pick the first candidate that meets the length threshold', () => {
             const longText = "Long content ".repeat(50);
             const anotherLongText = "Another long content ".repeat(50);
@@ -71,6 +84,31 @@ describe('Re:Leaf Content Script', () => {
             const content = document.querySelector('.releaf-content');
             expect(content.textContent).toContain('Long content');
             expect(content.textContent).not.toContain('Another long content');
+        });
+
+        test('Should fall back to text density if no selectors match', () => {
+            // A page with NO specific class names, but one main block of text
+            // and a noisy sidebar with links.
+            const mainText = "This is the very long main content of the article. ".repeat(20);
+            const sidebarText = "Link Link Link Link";
+
+            document.body.innerHTML = `
+                <div>
+                    <div id="nav">
+                        <a href="#">Menu</a> <a href="#">Home</a>
+                    </div>
+                    <div class="random-wrapper-123">
+                        ${mainText}
+                    </div>
+                    <div class="sidebar">
+                        <a href="#">${sidebarText}</a>
+                    </div>
+                </div>
+            `;
+
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.textContent).toContain('This is the very long main content');
         });
 
         test('Should fall back to body if no candidates meet the threshold', () => {
