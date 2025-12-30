@@ -91,6 +91,19 @@ function extractContent() {
         '.article_foot', '.article_copy', '.article_relation', '.article_sns',
         '.article_issue', '.article_related', '.article_reporter',
         '.copyright', '.copy_txt', '.relation_list', '.link_news',
+        // OhmyNews / Generic news portal noise
+        '.article_reaction', '.reaction_wrap', '.poll_wrap', '.survey_wrap',
+        '.news_reaction', '.article_poll', '.article_survey',
+        '[class*="reaction"]', '[class*="poll"]', '[class*="survey"]',
+        // Reporter contact / email sections
+        '.reporter_info', '.writer_info', '.byline_info', '.journalist',
+        '[class*="reporter"]', '[class*="journalist"]', '[class*="byline"]',
+        // Related news lists (various portals)
+        '.related_news', '.news_list', '.article_list', '.more_news',
+        '[class*="news_list"]', '[class*="article_list"]',
+        // Tags and keywords
+        '.tags', '.tag', '.keywords', '.article_tags', '.view_tag',
+        '[class*="tag"]', '[class*="keyword"]',
         // Generic footer patterns
         '[class*="copyright"]', '[class*="footer"]', '[class*="related"]',
         '[id*="copyright"]', '[id*="footer"]', '[id*="related"]'
@@ -109,10 +122,10 @@ function extractContent() {
         const el = currentNode;
         currentNode = walk.nextNode(); // Advance pointer before modification
 
-        // 4.1 Remove all attributes except "src", "href", "alt"
+        // 4.1 Remove all attributes except "src", "href", "alt", "data-src", "data-original"
         const attrs = [...el.attributes];
         attrs.forEach(attr => {
-            if (!['src', 'href', 'alt', 'title', 'rowspan', 'colspan'].includes(attr.name)) {
+            if (!['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original'].includes(attr.name)) {
                 el.removeAttribute(attr.name);
             }
         });

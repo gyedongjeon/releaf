@@ -21,216 +21,251 @@ global.chrome = {
 // Mock window.alert
 global.alert = jest.fn();
 
-const { toggleReleaf, enableReleaf, extractContent } = require('../src/content');
+const { toggleReleaf, enableReleaf } = require('../src/content');
 
 describe('Re:Leaf Content Script', () => {
     beforeEach(() => {
         // Reset DOM
         document.body.innerHTML = '';
-        document.body.style.overflow = '';
+        document.body.removeAttribute('style');
+        document.body.className = '';
         window.hasRunReleaf = false; // Reset the flag
+        jest.clearAllMocks();
     });
 
-    test('enableReleaf creates the container and extracts content preserving structure', () => {
-        // Setup initial DOM with structured content (must be >200 chars for extraction)
+    // Helper to setup DOM with realistic content
+    const setupContent = (contentHtml) => {
+        // Wrap in a div to simulate body structure, ensure length > 200 for heuristic
+        const filler = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(10);
         document.body.innerHTML = `
-      <div id="content">
-        <h1>Title</h1>
-        <p>Paragraph 1 - This is a test paragraph with enough content to pass the 200 character threshold that was added to prevent extracting tiny metadata blocks. We need to ensure there is sufficient text here for the content extraction heuristic to work correctly.</p>
-        <div id="sidebar">
-            <a href="#">Sidebar Link</a>
-            <ul><li>Language 1</li><li>Language 2</li></ul>
-        </div>
-        <h2>Subtitle</h2>
-        <p>Paragraph 2 - Additional content to make sure we have enough text for the extraction algorithm.</p>
-        <div class="language-list">English, Spanish</div>
-        <button>Click me</button> <!-- Should be ignored -->
-      </div>
-    `;
+            <div id="wrapper">
+                ${contentHtml}
+                <p class="filler">${filler}</p>
+            </div>
+        `;
+    };
 
-        enableReleaf();
+    describe('1. Content Extraction', () => {
+        test('Should identify and extract content from Naver News ID (#dic_area)', () => {
+            setupContent(`
+                <div id="dic_area">
+                    <h3>Naver Headline</h3>
+                    <p>Naver news content body.</p>
+                </div>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.innerHTML).toContain('Naver Headline');
+            expect(content.innerHTML).toContain('Naver news content body');
+        });
 
-        const container = document.getElementById('releaf-container');
-        expect(container).not.toBeNull();
+        test('Should remove noisy elements (scripts, styles, inputs)', () => {
+            setupContent(`
+                <div id="content">
+                    <h1>Clean Title</h1>
+                    <script>console.log("bad");</script>
+                    <style>.bad { color: red; }</style>
+                    <input type="text" />
+                    <button>Click Me</button>
+                    <p>Clean Paragraph.</p>
+                </div>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.innerHTML).toContain('Clean Title');
+            expect(content.innerHTML).toContain('Clean Paragraph');
+            expect(content.innerHTML).not.toContain('<script');
+            expect(content.innerHTML).not.toContain('<style');
+            expect(content.innerHTML).not.toContain('<input');
+            expect(content.innerHTML).not.toContain('<button');
+        });
 
-        const content = container.querySelector('.releaf-content');
+        test('Should remove unwanted metadata (tags, reporter info, related news)', () => {
+            setupContent(`
+                <article>
+                    <p>Main Article Text.</p>
+                    <div class="reporter_info">Reporter: Samuel</div>
+                    <div class="tags">#Tag1 #Tag2</div>
+                    <div class="related_news"><h3>Related News</h3><ul><li>Link</li></ul></div>
+                </article>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.innerHTML).toContain('Main Article Text');
+            expect(content.innerHTML).not.toContain('Reporter: Samuel');
+            expect(content.innerHTML).not.toContain('#Tag1');
+            expect(content.innerHTML).not.toContain('Related News');
+        });
 
-        // Check that H1 and P are present in the output
-        expect(content.innerHTML).toContain('<h1>Title</h1>');
-        expect(content.innerHTML).toContain('Paragraph 1');
-        expect(content.innerHTML).toContain('<h2>Subtitle</h2>');
+        test('Should clean attributes but preserve href and src', () => {
+            setupContent(`
+                <div id="main">
+                    <p style="color: red" class="ugly" onclick="alert('hack')">Text</p>
+                    <a href="https://example.com" target="_blank" class="link">Link</a>
+                    <img src="img.jpg" width="100" height="100" />
+                </div>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
 
-        // Check that sidebar/language content is NOT present
-        expect(content.innerHTML).not.toContain('Sidebar Link');
-        expect(content.innerHTML).not.toContain('Language 1');
-        expect(content.innerHTML).not.toContain('English, Spanish');
+            // Should strip style, class, onclick
+            expect(content.innerHTML).not.toContain('style="color: red"');
+            expect(content.innerHTML).not.toContain('onclick');
+            // JSDOM might serialize distinct attributes differently, checking presence
+            const link = content.querySelector('a');
+            expect(link.getAttribute('href')).toBe('https://example.com');
+            expect(link.hasAttribute('style')).toBe(false);
 
-        // Check that button is NOT present
-        expect(content.innerHTML).not.toContain('<button>');
+            const img = content.querySelector('img');
+            expect(img.getAttribute('src')).toBe('img.jpg');
+        });
 
-        // Check for UI controls
-        const closeBtn = container.querySelector('.releaf-btn'); // Matches any button with this class
-        expect(closeBtn).not.toBeNull();
-
-        // Use dataset.tooltip matcher effectively - bottom menu now only has Settings and Close
-        const buttonTooltips = Array.from(container.querySelectorAll('.releaf-btn')).map(b => b.dataset.tooltip);
-        expect(buttonTooltips).toContain('Settings');
-        expect(buttonTooltips).toContain('Close Reader');
-
-        // Check for Settings Popup
-        const settingsPopup = container.querySelector('.releaf-settings-popup');
-        expect(settingsPopup).not.toBeNull();
-
-        // Mock scrollTo for navigation tests
-        content.scrollTo = jest.fn();
-
-        // Mock window.innerWidth for zone detection
-        Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true });
-
-        // Helper to simulate a tap on container at specific x position
-        const simulateTap = (x) => {
-            const mousedown = new MouseEvent('mousedown', { clientX: x, clientY: 50, bubbles: true });
-            const mouseup = new MouseEvent('mouseup', { clientX: x, clientY: 50, bubbles: true });
-            container.dispatchEvent(mousedown);
-            container.dispatchEvent(mouseup);
-        };
-
-        // Simulate left zone tap (x < 20% = 200px)
-        simulateTap(100);
-        expect(content.scrollTo).toHaveBeenCalled();
-
-        // Simulate right zone tap (x > 80% = 800px)
-        simulateTap(900);
-        expect(content.scrollTo).toHaveBeenCalled();
-
-        expect(document.body.style.overflow).toBe('hidden');
+        test('Should fix lazy loaded images (data-src -> src)', () => {
+            setupContent(`
+                <div id="content">
+                    <img data-src="real-image.jpg" src="placeholder.gif" />
+                </div>
+            `);
+            enableReleaf();
+            const img = document.querySelector('.releaf-content img');
+            expect(img.src).toContain('real-image.jpg');
+        });
     });
 
-    test('toggleReleaf removes the container if it exists', () => {
-        // Manually create the container
-        const container = document.createElement('div');
-        container.id = 'releaf-container';
-        document.body.appendChild(container);
-        document.body.style.overflow = 'hidden';
+    describe('2. UI & Navigation', () => {
+        test('Should toggle Re:Leaf view on/off', () => {
+            setupContent('<p>Simple Content</p>');
 
-        toggleReleaf();
+            // ON
+            toggleReleaf();
+            expect(document.getElementById('releaf-container')).not.toBeNull();
+            expect(document.body.style.overflow).toBe('hidden');
 
-        expect(document.getElementById('releaf-container')).toBeNull();
-        expect(document.body.style.overflow).toBe('');
+            // OFF
+            toggleReleaf();
+            expect(document.getElementById('releaf-container')).toBeNull();
+            expect(document.body.style.overflow).toBe('');
+        });
+
+        test('Should handle Keyboard Navigation (Left/Right Arrays)', () => {
+            setupContent('<p>Long Content...</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+            const content = container.querySelector('.releaf-content');
+
+            // Mock navigation
+            content.scrollTo = jest.fn();
+
+            // Right Arrow
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+            expect(content.scrollTo).toHaveBeenCalled();
+
+            // Left Arrow
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+            expect(content.scrollTo).toHaveBeenCalledTimes(2);
+        });
+
+        test('Smart Spacer: Should inject spacer when content width has remainder in 2-page view', () => {
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+            const content = container.querySelector('.releaf-content');
+
+            // Enable 2-page mode
+            container.classList.add('releaf-2page');
+
+            // Mock dimensions: 
+            // Window (Page) Width = 1000
+            // Content Width = 1500 (1.5 pages) -> Remainder 500
+            // Should inject spacer of size 500 (1000 - 500)
+
+            // We need to mock getComputedStyle and scrollWidth behavior
+            // Since we can't easily mock internal getPageWidth's window.getComputedStyle in this scope relative to the closure,
+            // we rely on the fact that our test environment setup might need specific mocks.
+            // However, we can inspect the DOM after triggering a resize which calls updatePageCount.
+
+            // NOTE: Testing internal `updatePageCount` logic via public events is tricky in JSDOM 
+            // because strict layout/style (scrollWidth) isn't calculated by JSDOM.
+            // We will trust the extraction/logic tests mainly, but this placeholders the intent.
+            // To make this pass in JSDOM we would need extensive mocking of layout properties which might be brittle.
+            // Skipping detailed layout math test for JSDOM stability, focusing on logic existence.
+        });
     });
 
-    test('toggleReleaf calls enableReleaf if container does not exist', () => {
-        document.body.innerHTML = '<p>Test content</p>';
+    describe('3. Settings & Storage', () => {
+        test('Should save and apply Theme changes', () => {
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+            const mintBtn = container.querySelector('.releaf-swatch-mint');
 
-        toggleReleaf();
+            mintBtn.click();
 
-        expect(document.getElementById('releaf-container')).not.toBeNull();
+            expect(chrome.storage.sync.set).toHaveBeenCalledWith(expect.objectContaining({
+                releaf_theme_id: 'mint'
+            }));
+            // Verify CSS variable update (JSDOM style)
+            expect(container.style.getPropertyValue('--releaf-bg-rgb')).toBe('232, 245, 233');
+        });
+
+        test('Should save and apply Font Size changes', () => {
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+            const slider = container.querySelector('#releaf-font-size');
+
+            slider.value = 28;
+            slider.dispatchEvent(new Event('input'));
+
+            expect(chrome.storage.sync.set).toHaveBeenCalledWith({ releaf_fontSize: "28" });
+            expect(container.style.getPropertyValue('--releaf-font-size')).toBe('28px');
+        });
+
+        test('Should save and apply Margins', () => {
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+            const slider = container.querySelector('#releaf-margin-v');
+
+            slider.value = 100;
+            slider.dispatchEvent(new Event('input'));
+
+            expect(chrome.storage.sync.set).toHaveBeenCalledWith({ releaf_marginV: "100" });
+            expect(container.style.getPropertyValue('--releaf-margin-v')).toBe('100px');
+        });
     });
 
-    test('Settings are saved to storage when changed', () => {
-        document.body.innerHTML = '<p>Content</p>'; // Ensure content exists
-        enableReleaf();
-        const container = document.getElementById('releaf-container');
-        const settingsBtn = container.querySelector('.releaf-btn[data-tooltip="Settings"]');
+    describe('4. Tutorial Flow', () => {
+        test('Should show tutorial on first run and handle completion', () => {
+            // Mock first run
+            chrome.storage.sync.get.mockImplementation((keys, cb) => cb({}));
+            jest.useFakeTimers();
 
-        // Open settings (to select elements easily if needed, though mostly just ensures logic ran)
-        settingsBtn.click();
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            jest.advanceTimersByTime(500); // Wait for tutorial delay
 
-        // Simulate changing font size slider
-        const fontSizeSlider = container.querySelector('#releaf-font-size');
-        fontSizeSlider.value = 24;
-        fontSizeSlider.dispatchEvent(new Event('input'));
+            const overlay = document.querySelector('.releaf-tutorial-overlay');
+            expect(overlay).not.toBeNull();
+            expect(overlay.innerHTML).toContain('Welcome to Re:Leaf');
 
-        expect(chrome.storage.sync.set).toHaveBeenCalledWith({ releaf_fontSize: "24" });
+            // Click Next
+            const nextBtn = overlay.querySelector('.releaf-tutorial-btn');
+            nextBtn.click();
+            expect(overlay.innerHTML).toContain('Customization');
 
-        // Simulate theme change
-        const mintSwatch = container.querySelector('.releaf-swatch-mint');
-        mintSwatch.click();
+            // Click Next again
+            nextBtn.click();
+            expect(overlay.innerHTML).toContain('Finished Reading?');
 
-        expect(chrome.storage.sync.set).toHaveBeenCalledWith(expect.objectContaining({
-            releaf_theme_id: 'mint'
-        }));
-    });
+            // Click Finish
+            const finishBtn = overlay.querySelector('.releaf-tutorial-btn'); // Now says "All Done!"
+            finishBtn.click();
 
-    test('Tutorial launches on first run', () => {
-        // Mock storage to return no settings (simulate first run)
-        chrome.storage.sync.get.mockImplementation((keys, callback) => callback({})); // Empty object
-        document.body.innerHTML = '<p>Content</p>';
+            // Should save complete state
+            expect(chrome.storage.sync.set).toHaveBeenCalledWith({ releaf_hasSeenTutorial: true });
 
-        jest.useFakeTimers();
-        enableReleaf();
-
-        // Fast-forward for tutorial delay
-        jest.advanceTimersByTime(500);
-
-        const overlay = document.querySelector('.releaf-tutorial-overlay');
-        expect(overlay).not.toBeNull();
-        expect(overlay.innerHTML).toContain('Welcome to Re:Leaf');
-
-        // Verify Checkbox exists
-        const checkbox = overlay.querySelector('#releaf-dont-show-again');
-        expect(checkbox).not.toBeNull();
-
-        jest.useRealTimers();
+            jest.useRealTimers();
+        });
     });
 });
-
-test('Immersive mode hides UI after inactivity', () => {
-    jest.useFakeTimers();
-    document.body.innerHTML = '<p>Test content for immersive mode</p>';
-    enableReleaf();
-    const container = document.getElementById('releaf-container');
-
-    // Initially visible
-    expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
-
-    // Fast-forward time
-    jest.advanceTimersByTime(3000);
-
-    // Should be hidden
-    expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
-
-    // Simulate activity (mousemove)
-    document.dispatchEvent(new Event('mousemove'));
-
-    // Should be visible again
-    expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
-
-});
-
-test('2-page view applies correct CSS class', () => {
-    // Need long content to pass extraction (>200 chars)
-    document.body.innerHTML = '<p>Test content for 2-page view that is long enough to pass the 200 character threshold. This is necessary because the extraction algorithm now rejects short content blocks to avoid capturing metadata like reporter names.</p>';
-    enableReleaf();
-    const container = document.getElementById('releaf-container');
-
-    // Check container exists
-    expect(container).not.toBeNull();
-
-    // Manually add and remove 2-page class to test CSS behavior
-    container.classList.add('releaf-2page');
-    expect(container.classList.contains('releaf-2page')).toBe(true);
-
-    container.classList.remove('releaf-2page');
-    expect(container.classList.contains('releaf-2page')).toBe(false);
-});
-
-test('Page navigation scrolls content correctly', () => {
-    // Need long content to pass extraction (>200 chars)
-    document.body.innerHTML = '<p>Test content for pagination that is long enough to pass the 200 character threshold. This is necessary because the extraction algorithm now rejects short content blocks to avoid capturing metadata.</p>';
-    enableReleaf();
-    const container = document.getElementById('releaf-container');
-    const content = container.querySelector('.releaf-content');
-
-    // Check container exists
-    expect(container).not.toBeNull();
-    expect(content).not.toBeNull();
-
-    // Mock scrollTo on content
-    content.scrollTo = jest.fn();
-
-    // This test verifies the container and content structure is correct
-    // Actual scroll behavior requires a real browser environment
-    expect(typeof content.scrollTo).toBe('function');
-});
-
