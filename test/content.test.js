@@ -31,6 +31,27 @@ describe('Re:Leaf Content Script', () => {
         document.body.className = '';
         window.hasRunReleaf = false; // Reset the flag
         jest.clearAllMocks();
+
+        // Mock offsetParent for JSDOM
+        // JSDOM defaults offsetParent to null (or unavailable), which causes our "remove hidden" logic to delete everything.
+        // We mock it: if 'hidden' class or style display:none is present, return null. Otherwise return a dummy object.
+        Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+            configurable: true,
+            get() {
+                // Simple heuristic for test: if display: none, return null. 
+                // Note: window.getComputedStyle is expensive/complex in JSDOM if not fully supported, 
+                // but simpler checks work for our manual setup.
+                // We'll check inline style and a special class for testing.
+                if (this.style.display === 'none' || this.classList.contains('hidden')) {
+                    return null;
+                }
+                // Also check parent (recursive) - simulated simple bubble up
+                if (this.parentElement && (this.parentElement.style.display === 'none' || this.parentElement.classList.contains('hidden'))) {
+                    return null;
+                }
+                return document.body; // Return something truthy
+            }
+        });
     });
 
     // Helper to setup DOM with realistic content
@@ -57,6 +78,23 @@ describe('Re:Leaf Content Script', () => {
             const content = document.querySelector('.releaf-content');
             expect(content.innerHTML).toContain('Naver Headline');
             expect(content.innerHTML).toContain('Naver news content body');
+        });
+
+        test('Should remove hidden duplicate content (e.g. mobile/desktop versions)', () => {
+            setupContent(`
+                <div id="content">
+                    <p>Visible Content</p>
+                    <p style="display: none">Hidden Duplicate</p>
+                    <div class="hidden">
+                        <p>Hidden Child</p>
+                    </div>
+                </div>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.textContent).toContain('Visible Content');
+            expect(content.textContent).not.toContain('Hidden Duplicate');
+            expect(content.textContent).not.toContain('Hidden Child');
         });
 
         test('Should extract content from generic wrapper (.content or [role="main"])', () => {
@@ -329,30 +367,70 @@ describe('Re:Leaf Content Script', () => {
             jest.useRealTimers();
         });
 
-        test('Smart Spacer: Should inject spacer when content width has remainder in 2-page view', () => {
+        test('Strict Column: Should calculate and set precise column width', () => {
+            jest.useFakeTimers();
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+
+            // Mock scrollTo since JSDOM doesn't implement it
+            const content = container.querySelector('.releaf-content');
+            content.scrollTo = jest.fn();
+
+            // Set specific window width
+            Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1200 });
+
+            // Default marginH is 40. Gap is 60.
+            // Expected Col Width: (1200 - (40*2) - 60) / 2 = (1120 - 60) / 2 = 530
+            const expectedWidth = 530;
+
+            // Trigger resize to run updateLayout
+            window.dispatchEvent(new Event('resize'));
+
+            // Wait for debounce
+            jest.advanceTimersByTime(100);
+
+            // Check CSS variable
+            const colWidth = container.style.getPropertyValue('--releaf-column-width');
+            expect(colWidth).toBe(`${expectedWidth}px`);
+
+            jest.useRealTimers();
+        });
+
+        test('Virtual Overscroll: Should apply transform when scrolling past max content', () => {
+            jest.useFakeTimers();
             setupContent('<p>Content</p>');
             enableReleaf();
             const container = document.getElementById('releaf-container');
             const content = container.querySelector('.releaf-content');
+            content.scrollTo = jest.fn();
 
-            // Enable 2-page mode
-            container.classList.add('releaf-2page');
+            // Mock Dimensions
+            // Viewport: 1000
+            // Content: 1500 (Max Scroll = 500)
+            Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true });
+            Object.defineProperty(content, 'clientWidth', { value: 1000, configurable: true });
+            Object.defineProperty(content, 'scrollWidth', { value: 1500, configurable: true });
 
-            // Mock dimensions: 
-            // Window (Page) Width = 1000
-            // Content Width = 1500 (1.5 pages) -> Remainder 500
-            // Should inject spacer of size 500 (1000 - 500)
+            // Trigger ArrowRight twice. 
+            // 1st: Scroll to 1000 (valid, maxScroll=500? wait. maxScroll = 1500 - 1000 = 500).
+            // So target 1000 is > 500. Should overscroll.
 
-            // We need to mock getComputedStyle and scrollWidth behavior
-            // Since we can't easily mock internal getPageWidth's window.getComputedStyle in this scope relative to the closure,
-            // we rely on the fact that our test environment setup might need specific mocks.
-            // However, we can inspect the DOM after triggering a resize which calls updatePageCount.
+            // We need to trigger the global listener or the internal logic.
+            // Since we are monitoring side effects, global Keydown is easiest.
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
 
-            // NOTE: Testing internal `updatePageCount` logic via public events is tricky in JSDOM 
-            // because strict layout/style (scrollWidth) isn't calculated by JSDOM.
-            // We will trust the extraction/logic tests mainly, but this placeholders the intent.
-            // To make this pass in JSDOM we would need extensive mocking of layout properties which might be brittle.
-            // Skipping detailed layout math test for JSDOM stability, focusing on logic existence.
+            // Initial call is to scrollTo(1000)
+            expect(content.scrollTo).toHaveBeenCalledWith({ left: 1000, behavior: 'smooth' });
+
+            // Wait for setTimeout in setScrollPosition
+            jest.runAllTimers();
+
+            // Check Transform
+            // Target: 1000. Max: 500. Overscroll: 500.
+            expect(content.style.transform).toBe('translateX(-500px)');
+
+            jest.useRealTimers();
         });
     });
 

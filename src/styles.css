@@ -131,7 +131,8 @@
 /* 2-page view mode */
 .releaf-2page .releaf-content {
   column-count: auto;
-  column-width: calc(50vw - 80px);
+  /* Use JS-calculated width for precision, fallback to approx for loading/NoJS */
+  column-width: var(--releaf-column-width, calc(50vw - 80px));
   column-gap: 60px;
   height: calc(100vh - 120px);
   column-fill: auto;
