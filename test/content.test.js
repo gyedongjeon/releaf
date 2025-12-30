@@ -59,6 +59,19 @@ describe('Re:Leaf Content Script', () => {
             expect(content.innerHTML).toContain('Naver news content body');
         });
 
+        test('Should extract content from generic wrapper (.content or [role="main"])', () => {
+            setupContent(`
+                <div class="content" role="main">
+                    <h3>Generic Report Title</h3>
+                    <p>This is a report body that lacks semantic tags like article or main.</p>
+                </div>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.innerHTML).toContain('Generic Report Title');
+            expect(content.innerHTML).toContain('report body');
+        });
+
         test('Should pick the first candidate that meets the length threshold', () => {
             const longText = "Long content ".repeat(50);
             const anotherLongText = "Another long content ".repeat(50);

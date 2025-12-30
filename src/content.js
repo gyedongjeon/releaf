@@ -47,7 +47,12 @@ function extractContent() {
         '#article_txt', '.article_txt', // Donga
         'article', 'main', '#content', '#main', '#bodyContent',
         '.main-content', '.post-content', '.article-content',
-        '.entry-content', '#story-body'
+        '.main-content', '.post-content', '.article-content',
+        '.entry-content', '#story-body',
+        // Generic wrappers often used when semantic tags are missing
+        '.content', '#content-area', '.page-content',
+        '[role="main"]', '.post-body', '.report-content',
+        '.document-body', '#report-body'
     ];
 
     let article = null;
