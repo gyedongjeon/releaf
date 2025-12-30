@@ -59,6 +59,40 @@ describe('Re:Leaf Content Script', () => {
             expect(content.innerHTML).toContain('Naver news content body');
         });
 
+        test('Should pick the first candidate that meets the length threshold', () => {
+            const longText = "Long content ".repeat(50);
+            const anotherLongText = "Another long content ".repeat(50);
+            document.body.innerHTML = `
+                <div id="short" class="newsct_article">Too short</div>
+                <div id="long" class="article_txt">${longText}</div>
+                <div id="another" class="main-content">${anotherLongText}</div>
+            `;
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.textContent).toContain('Long content');
+            expect(content.textContent).not.toContain('Another long content');
+        });
+
+        test('Should fall back to body if no candidates meet the threshold', () => {
+            const bodyText = "This is the fallback body content. " + "Filler ".repeat(50);
+            document.body.innerHTML = `
+                <div class="newsct_article">Too short</div>
+                <p>${bodyText}</p>
+            `;
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            // Since it falls back to body, it should contain everything in body (except what was removed by cleanup)
+            expect(content.textContent).toContain('This is the fallback body content');
+            expect(content.textContent).toContain('Too short');
+        });
+
+        test('Should show alert if no content is found', () => {
+            document.body.innerHTML = '';
+            enableReleaf();
+            expect(global.alert).toHaveBeenCalledWith("No content found to format.");
+            expect(document.getElementById('releaf-container')).toBeFalsy();
+        });
+
         test('Should remove noisy elements (scripts, styles, inputs)', () => {
             setupContent(`
                 <div id="content">
@@ -78,6 +112,54 @@ describe('Re:Leaf Content Script', () => {
             expect(content.innerHTML).not.toContain('<style');
             expect(content.innerHTML).not.toContain('<input');
             expect(content.innerHTML).not.toContain('<button');
+        });
+
+        test('Should remove specific news portal noise (Daum, Naver, Donga)', () => {
+            setupContent(`
+                <article>
+                    <p>Genuine content</p>
+                    <div class="layer_util">Utility Layer</div>
+                    <div class="box_recommend">Recommended Articles</div>
+                    <div class="art_copy">Copyright info</div>
+                    <div class="article_foot">Footer</div>
+                    <div class="article_reporter">Reporter Bio</div>
+                    <div class="poll_wrap">Poll</div>
+                </article>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            expect(content.textContent).toContain('Genuine content');
+            expect(content.textContent).not.toContain('Utility Layer');
+            expect(content.textContent).not.toContain('Recommended Articles');
+            expect(content.textContent).not.toContain('Copyright info');
+            expect(content.textContent).not.toContain('Footer');
+            expect(content.textContent).not.toContain('Reporter Bio');
+            expect(content.textContent).not.toContain('Poll');
+        });
+
+        test('Should remove all attributes except the allowed whitelist', () => {
+            setupContent(`
+                <div id="main">
+                    <p data-unknown="value" aria-label="label" class="test" style="color:red">Text</p>
+                    <table>
+                        <tr>
+                            <td colspan="2" rowspan="2" class="cell">Cell</td>
+                        </tr>
+                    </table>
+                </div>
+            `);
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            const p = content.querySelector('p');
+            expect(p.hasAttribute('data-unknown')).toBe(false);
+            expect(p.hasAttribute('aria-label')).toBe(false);
+            expect(p.hasAttribute('class')).toBe(false);
+            expect(p.hasAttribute('style')).toBe(false);
+
+            const td = content.querySelector('td');
+            expect(td.getAttribute('colspan')).toBe("2");
+            expect(td.getAttribute('rowspan')).toBe("2");
+            expect(td.hasAttribute('class')).toBe(false);
         });
 
         test('Should remove unwanted metadata (tags, reporter info, related news)', () => {
@@ -163,6 +245,50 @@ describe('Re:Leaf Content Script', () => {
             // Left Arrow
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
             expect(content.scrollTo).toHaveBeenCalledTimes(2);
+        });
+
+        test('Should toggle off Re:Leaf on Escape key', () => {
+            setupContent('<h1>Hello World</h1>');
+            enableReleaf();
+            expect(document.getElementById('releaf-container')).toBeTruthy();
+
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            expect(document.getElementById('releaf-container')).toBeFalsy();
+        });
+
+        test('Should stay at page 0 when ArrowLeft is pressed at the beginning', () => {
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            content.scrollLeft = 0;
+            content.scrollTo = jest.fn((options) => {
+                content.scrollLeft = options.left;
+            });
+
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+            expect(content.scrollTo).toHaveBeenCalledWith({ left: 0, behavior: 'smooth' });
+            expect(content.scrollLeft).toBe(0);
+        });
+
+        test('Should debounce resize events and snap to nearest page', () => {
+            jest.useFakeTimers();
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            content.scrollTo = jest.fn();
+
+            // Trigger multiple resize events
+            window.dispatchEvent(new Event('resize'));
+            window.dispatchEvent(new Event('resize'));
+            window.dispatchEvent(new Event('resize'));
+
+            expect(content.scrollTo).not.toHaveBeenCalled();
+
+            // Fast-forward
+            jest.advanceTimersByTime(100);
+
+            expect(content.scrollTo).toHaveBeenCalledTimes(1);
+            jest.useRealTimers();
         });
 
         test('Smart Spacer: Should inject spacer when content width has remainder in 2-page view', () => {
@@ -265,6 +391,44 @@ describe('Re:Leaf Content Script', () => {
             // Should save complete state
             expect(chrome.storage.sync.set).toHaveBeenCalledWith({ releaf_hasSeenTutorial: true });
 
+            jest.useRealTimers();
+        });
+    });
+
+    describe('5. Immersive Mode', () => {
+        test('Should hide UI after idle timeout', () => {
+            jest.useFakeTimers();
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+
+            expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+            // Fast-forward 3 seconds (IDLE_TIMEOUT is 3000)
+            jest.advanceTimersByTime(3000);
+
+            expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
+            jest.useRealTimers();
+        });
+
+        test('Should show UI and reset timer on activity', () => {
+            jest.useFakeTimers();
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+
+            // Hide it first
+            jest.advanceTimersByTime(3000);
+            expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
+
+            // Trigger mousemove activity
+            document.dispatchEvent(new MouseEvent('mousemove'));
+
+            expect(container.classList.contains('releaf-ui-hidden')).toBe(false);
+
+            // Should hide again after another 3 seconds
+            jest.advanceTimersByTime(3000);
+            expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
             jest.useRealTimers();
         });
     });
