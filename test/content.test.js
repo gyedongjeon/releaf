@@ -314,6 +314,12 @@ describe('Re:Leaf Content Script', () => {
             // Mock navigation
             content.scrollTo = jest.fn();
 
+            // Mock Dimensions to ensure 2 pages
+            Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true });
+            Object.defineProperty(content, 'clientWidth', { value: 1000, configurable: true });
+            Object.defineProperty(content, 'scrollWidth', { value: 2000, configurable: true });
+            content.style.transform = 'translateX(0)';
+
             // Right Arrow
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
             expect(content.scrollTo).toHaveBeenCalled();
@@ -429,6 +435,37 @@ describe('Re:Leaf Content Script', () => {
             // Check Transform
             // Target: 1000. Max: 500. Overscroll: 500.
             expect(content.style.transform).toBe('translateX(-500px)');
+
+            jest.useRealTimers();
+        });
+
+        test('Navigation Limit: Should not navigate past the last page', () => {
+            jest.useFakeTimers();
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const container = document.getElementById('releaf-container');
+            const content = container.querySelector('.releaf-content');
+            content.scrollTo = jest.fn();
+
+            // Mock Dimensions: 2 Pages total
+            // Viewport: 1000
+            // Content: 1500
+            Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true });
+            Object.defineProperty(content, 'clientWidth', { value: 1000, configurable: true });
+            Object.defineProperty(content, 'scrollWidth', { value: 1500, configurable: true });
+
+            // Set initial position to Page 2 (index 1, scrollLeft 1000)
+            content.scrollLeft = 1000;
+            // Also need to spoof getVirtualScroll since it reads transform
+            // Assuming no transform initially or just 0
+            content.style.transform = 'translateX(0)';
+
+            // Trigger ArrowRight (Next Page)
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+
+            // Should NOT try to scroll to 2000
+            expect(content.scrollTo).not.toHaveBeenCalled();
+            // Or if it did, it should be to 1000 (re-snap) but logic says return.
 
             jest.useRealTimers();
         });

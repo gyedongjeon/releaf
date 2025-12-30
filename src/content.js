@@ -360,35 +360,32 @@ function enableReleaf() {
         }, 0);
     };
 
+    const getTotalPages = () => {
+        const pageWidth = getPageWidth();
+        const totalWidth = content.scrollWidth;
+        // Calculate pages (add small buffer for rounding errors)
+        return Math.max(1, Math.ceil((totalWidth - 10) / pageWidth));
+    };
+
     const goToPrevPage = () => {
         const pageWidth = getPageWidth();
-
-        // Include current visual offset in calculation
-        // If we are transformed, our "virtual" scroll is scrollLeft + transform
-        // But simpler: just calculate based on current snapped page index
-        const currentScroll = content.scrollLeft;
-
-        // If transformed, we are technically at maxScroll visually designated as a higher page.
-        // Recover "virtual" current scroll:
-        const transformMatch = content.style.transform.match(/translateX\(-?([\d.]+)px\)/);
-        const visualOffset = transformMatch ? parseFloat(transformMatch[1]) : 0;
-        const virtualScroll = currentScroll + visualOffset;
-
-        const targetPage = Math.max(0, Math.floor((virtualScroll - 10) / pageWidth));
-
+        const currentVirtualScroll = getVirtualScroll(content);
+        const targetPage = Math.max(0, Math.floor((currentVirtualScroll - 10) / pageWidth));
         setScrollPosition(targetPage * pageWidth);
     };
 
     const goToNextPage = () => {
         const pageWidth = getPageWidth();
-        const currentScroll = content.scrollLeft;
-
-        const transformMatch = content.style.transform.match(/translateX\(-?([\d.]+)px\)/);
-        const visualOffset = transformMatch ? parseFloat(transformMatch[1]) : 0;
-        const virtualScroll = currentScroll + visualOffset;
-
+        const currentVirtualScroll = getVirtualScroll(content);
         // Calculate next page position aligned to page width
-        const targetPage = Math.floor((virtualScroll + 10) / pageWidth) + 1;
+        const targetPage = Math.floor((currentVirtualScroll + 10) / pageWidth) + 1;
+
+        // Prevent scrolling past the last page
+        if (targetPage >= getTotalPages()) {
+            // Optional: Bounce effect or just return
+            return;
+        }
+
         const targetScroll = targetPage * pageWidth;
 
         setScrollPosition(targetScroll);
@@ -813,11 +810,10 @@ function enableReleaf() {
     // Update page counter function
     const updatePageCount = () => {
         const pageWidth = getPageWidth();
-        const totalWidth = content.scrollWidth;
         const currentVirtualScroll = getVirtualScroll(content);
 
         // Calculate pages (add small buffer for rounding errors)
-        const totalPages = Math.max(1, Math.ceil((totalWidth - 10) / pageWidth));
+        const totalPages = getTotalPages();
         const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentVirtualScroll + 10) / pageWidth) + 1));
 
         pageCounter.textContent = `${currentPage} / ${totalPages}`;
@@ -979,6 +975,13 @@ function handleKeyNavigation(e) {
     if (e.key === 'ArrowRight') {
         const currentVirtualScroll = getVirtualScroll(content);
         const targetPage = Math.floor((currentVirtualScroll + 10) / pageWidth) + 1;
+
+        // Calculate total pages to prevent overflow
+        // Use logic similar to internal helper
+        const totalPages = Math.max(1, Math.ceil((content.scrollWidth - 10) / pageWidth));
+
+        if (targetPage >= totalPages) return;
+
         setScrollPosition(content, targetPage * pageWidth);
     } else if (e.key === 'ArrowLeft') {
         const currentVirtualScroll = getVirtualScroll(content);
