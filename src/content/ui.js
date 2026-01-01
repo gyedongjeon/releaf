@@ -6,7 +6,7 @@
 // but for cleaner modules we can just use the string literal or rely on shared scope if not using modules.
 // Since we are doing sequential injection, we ideally want these to be functions that take dependencies or define constants.
 // For simplicity in this non-module setup, we will use the string literal "releaf-container".
-const RELEAF_Container_ID_UI = "releaf-container";
+var RELEAF_Container_ID_UI = "releaf-container";
 
 /**
  * Creates the main container for the reader view.

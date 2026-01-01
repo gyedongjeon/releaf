@@ -7,18 +7,24 @@
 // For sequential sequential injection, we rely on global scope.
 
 // Constants
-const RELEAF_Container_ID = "releaf-container";
+// Constants
+var RELEAF_Container_ID = "releaf-container";
 
-// Prevent duplicate initialization
+// Initialization Guard
 if (window.hasRunReleaf) {
-    throw new Error("Re:Leaf already initialized");
-}
-window.hasRunReleaf = true;
+    // If already initialized, we don't need to re-run the setup logic.
+    // The previously attached event listeners and functions are still active.
+    // We just exit this script block to avoid re-declaring listeners.
+} else {
+    window.hasRunReleaf = true;
 
-// Globals for Timer
-let idleTimer;
-const IDLE_TIMEOUT = 3000; // 3 seconds
-let resizeTimeout;
+    // Globals for Timer
+    var idleTimer;
+    var resizeTimeout;
+    // var IDLE_TIMEOUT = 3000; // redeclaring const with var is tricky if old const exists, but here we replace it.
+}
+
+var IDLE_TIMEOUT = 3000; // Move outside to be accessible or var.
 
 /**
  * Toggles the Re:Leaf view on the current page.
