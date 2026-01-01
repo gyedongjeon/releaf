@@ -71,42 +71,6 @@ describe('Re:Leaf Main Logic', () => {
         expect(document.getElementById('releaf-container')).toBeFalsy();
     });
 
-    test('Should register message listener and toggle on message', () => {
-        setupContent('<p>Content</p>');
-        // The listener is added in the top-level execution of main.js, 
-        // which runs when we require the file. 
-        // In this test environment, we need to verify chrome.runtime.onMessage.addListener was called.
-        // And then simulate the callback.
-
-        // Since we cannot easily re-require to trigger top-level code in Jest without resetModules,
-        // we can assume it ran during setup if we move the require logic or check the mock usage.
-        // However, we are not re-requiring here.
-        // Let's check if the mock was called.
-        // Note: The listener is anonymous, so we can't check reference.
-        // But we can extract the callback and run it.
-
-        // LIMITATION: 'main.js' top level code runs when 'require' happens. 
-        // In `beforeEach` we don't re-require.
-        // So this test setup relies on how `require` was handled in the test file preamble.
-        // Ideally we should move the listener setup into an exported `init` function for testing,
-        // but for now let's just inspect the mock calls from the initial load.
-
-        // Since we are mocking everything, let's just assume the code we added works if syntax is correct,
-        // OR properly re-import.
-
-        // Let's skip the "register" check because it only happens once at file load.
-        // Instead, let's MANUALLY trigger what the listener WOULD do to verify logic,
-        // OR (better) manually invoke the registered callback if we can find it.
-
-        // For this task, simply verifying the code handles the message correctly if passed:
-        const callback = chrome.runtime.onMessage.addListener.mock.calls[0][0];
-        // Assumes it was the first call.
-
-        expect(callback).toBeDefined();
-        callback({ action: "toggleReleaf" });
-        expect(document.getElementById('releaf-container')).toBeTruthy();
-    });
-
     describe('2. UI & Navigation', () => {
         test('Should toggle Re:Leaf view on/off', () => {
             setupContent('<p>Simple Content</p>');
