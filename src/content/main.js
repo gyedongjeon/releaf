@@ -21,7 +21,13 @@ if (window.hasRunReleaf) {
     // Globals for Timer
     var idleTimer;
     var resizeTimeout;
-    // var IDLE_TIMEOUT = 3000; // redeclaring const with var is tricky if old const exists, but here we replace it.
+
+    // Listen for messages from background.js
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "toggleReleaf") {
+            toggleReleaf();
+        }
+    });
 }
 
 var IDLE_TIMEOUT = 3000; // Move outside to be accessible or var.
