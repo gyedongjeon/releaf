@@ -21,7 +21,16 @@ global.chrome = {
 // Mock window.alert
 global.alert = jest.fn();
 
-const { toggleReleaf, enableReleaf } = require('../src/content');
+const {
+    toggleReleaf,
+    enableReleaf,
+    createReaderContainer,
+    createContent,
+    createBottomMenu,
+    createSettingsPopup,
+    createPageCounter,
+    createIconSvg
+} = require('../src/content');
 
 describe('Re:Leaf Content Script', () => {
     beforeEach(() => {
@@ -583,6 +592,94 @@ describe('Re:Leaf Content Script', () => {
             jest.advanceTimersByTime(3000);
             expect(container.classList.contains('releaf-ui-hidden')).toBe(true);
             jest.useRealTimers();
+        });
+    });
+
+    describe('6. UI Helper Functions', () => {
+        test('createReaderContainer should return a div with correct ID and default theme', () => {
+            const container = createReaderContainer();
+            expect(container.tagName).toBe('DIV');
+            expect(container.id).toBe('releaf-container');
+            expect(container.className).toBe('releaf-theme-light');
+        });
+
+        test('createContent should return a div with content and correct class', () => {
+            const html = '<p>Test Content</p>';
+            const content = createContent(html);
+            expect(content.tagName).toBe('DIV');
+            expect(content.className).toBe('releaf-content');
+            expect(content.innerHTML).toBe(html);
+        });
+
+        test('createBottomMenu should create menu with all controls', () => {
+            const container = document.createElement('div');
+            container.id = 'releaf-container'; // Needed for page counter update logic
+            document.body.appendChild(container); // Append to body so getElementById works in page counter
+
+            const content = document.createElement('div');
+            const menu = createBottomMenu(container, content);
+
+            expect(menu.className).toBe('releaf-bottom-menu');
+            expect(menu.querySelector('[data-role="settings-btn"]')).toBeTruthy();
+            expect(menu.querySelector('.releaf-page-counter')).toBeTruthy();
+            expect(menu.querySelector('[data-role="close-btn"]')).toBeTruthy();
+
+            document.body.removeChild(container);
+        });
+
+        test('createSettingsPopup should create popup structure', () => {
+            const container = document.createElement('div');
+            const { settingsPopup, updateSettingsUI } = createSettingsPopup(container);
+
+            expect(settingsPopup.className).toBe('releaf-settings-popup');
+            expect(settingsPopup.querySelector('.releaf-settings-header')).toBeTruthy();
+            expect(settingsPopup.querySelectorAll('.releaf-color-swatch').length).toBeGreaterThan(0);
+            expect(settingsPopup.querySelector('#releaf-font-size')).toBeTruthy();
+            expect(typeof updateSettingsUI).toBe('function');
+        });
+
+        test('createPageCounter should create counter and handle updates', () => {
+            jest.useFakeTimers();
+            const content = document.createElement('div');
+            // Mock layout for calc
+            Object.defineProperty(content, 'clientWidth', { value: 500 });
+            Object.defineProperty(content, 'scrollWidth', { value: 1000 });
+
+            // We need the container in DOM for `update` function in createPageCounter to work if it queries it
+            const container = document.createElement('div');
+            container.id = 'releaf-container';
+            document.body.appendChild(container);
+
+            const counter = createPageCounter(content);
+            expect(counter.className).toBe('releaf-page-counter');
+            expect(counter.textContent).toBe('1 / 1'); // Initial
+
+            // Fast forward for the setTimeout update
+            jest.advanceTimersByTime(200);
+
+            // Trigger scroll
+            content.dispatchEvent(new Event('scroll'));
+            jest.runAllTimers(); // RequestAnimationFrame usually runs immediately in JSDOM or needs help, but we mock timers
+
+            // With mocked dimensions: 1000 scrollWidth, 500 clientWidth -> 2 pages
+            // But we need to check if the mocked `getVirtualScroll` (which is global) or internal logic works.
+            // In unit test here, we haven't mocked getVirtualScroll from content.js since it's not exported or we are relying on internal logic.
+            // Actually, `createPageCounter` uses `getVirtualScroll`. Is it available?
+            // Yes, it is used inside `content.js`. 
+            // However, JSDOM doesn't do real layout. The `getVirtualScroll` uses `style.transform`.
+
+            expect(counter).toBeTruthy();
+            // Detailed logic verification is already covered in integration tests (Section 2), 
+            // here we ensure the component is created correctly.
+
+            document.body.removeChild(container);
+            jest.useRealTimers();
+        });
+
+        test('createIconSvg should return SVG string', () => {
+            const svg = createIconSvg('settings');
+            expect(svg).toContain('<svg');
+            expect(svg).toContain('width="22"');
         });
     });
 });

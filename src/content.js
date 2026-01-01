@@ -39,105 +39,118 @@ function toggleReleaf() {
  * @returns {string} HTML string of the extracted content
  */
 function extractContent() {
+    let article = findMainContent(document);
+
+    // Deep clone to manipulate safely
+    const clone = article.cloneNode(true);
+
+    // Remove hidden elements from the clone based on the original structure
+    removeHiddenElements(article, clone);
+
+    // Remove noise (ads, sidebars, etc.)
+    cleanupNodes(clone);
+
+    // Strip attributes and fix images
+    sanitizeAndFixContent(clone);
+
+    return clone.innerHTML;
+}
+
+/**
+ * Finds the main content element using selectors or text density.
+ * @param {Document|Element} root 
+ * @returns {Element} The matched element or body/fallback
+ */
+function findMainContent(root) {
     // 1. Selector Candidates
-    // specific IDs often used for main content > semantic tags > fallback
-    // Added '#dic_area' for Naver News support
     const candidates = [
         '#dic_area', '.newsct_article', // Naver News
         '#article_txt', '.article_txt', // Donga
         'article', 'main', '#content', '#main', '#bodyContent',
         '.main-content', '.post-content', '.article-content',
-
         '.entry-content', '#story-body',
-        // Generic wrappers often used when semantic tags are missing
         '.content', '#content-area', '.page-content',
         '[role="main"]', '.post-body', '.report-content',
         '.document-body', '#report-body'
     ];
 
-    let article = null;
     for (const selector of candidates) {
-        const found = document.querySelector(selector);
-        // Heuristic: Content must be of substantial length to be the "main" article
-        // This prevents selecting a tiny <article> tag that only contains a byline.
-        // Use textContent as fallback for JSDOM compatibility
+        const found = root.querySelector(selector);
+        // Heuristic: Content must be of substantial length (>200 chars)
         const textLength = found ? (found.innerText || found.textContent || '').length : 0;
         if (found && textLength > 200) {
-            article = found;
-            break;
+            return found;
         }
     }
 
-    // 1.5 Text Density Fallback
-    // If no explicit selector matched, find the element with the highest text density.
-    if (!article) {
-        const blocks = document.body.querySelectorAll('div, section, article, main');
-        let maxScore = 0;
-        let bestBlock = null;
+    // 2. Text Density Fallback
+    const bestBlock = findBestBlockByDensity(root);
+    if (bestBlock) return bestBlock;
 
-        blocks.forEach(block => {
-            // Skip hidden elements (simple check)
-            if (block.offsetParent === null) return;
+    // 3. Last Resort
+    return root.querySelector('article') || root.body;
+}
 
-            const text = block.innerText || block.textContent || '';
-            const textLen = text.length;
-            if (textLen < 200) return; // Ignore small blocks
+/**
+ * Scans for the element with the highest text density.
+ * @param {Document|Element} root 
+ * @returns {Element|null}
+ */
+function findBestBlockByDensity(root) {
+    const blocks = root.querySelectorAll('div, section, article, main');
+    let maxScore = 0;
+    let bestBlock = null;
 
-            // Calculate Link Density
-            const links = block.querySelectorAll('a');
-            let linkLen = 0;
-            links.forEach(l => linkLen += (l.innerText || l.textContent || '').length);
+    blocks.forEach(block => {
+        if (block.offsetParent === null) return; // Skip invisible
 
-            // Score: Text Length penalized by Link Density
-            // If 50% of text is links (nav/footer), score is 0.
-            const linkDensity = linkLen / Math.max(1, textLen);
-            const score = textLen * (1 - linkDensity * 2);
+        const text = block.innerText || block.textContent || '';
+        const textLen = text.length;
+        if (textLen < 200) return; // Ignore small blocks
 
-            if (score > maxScore) {
-                maxScore = score;
-                bestBlock = block;
-            }
-        });
+        const links = block.querySelectorAll('a');
+        let linkLen = 0;
+        links.forEach(l => linkLen += (l.innerText || l.textContent || '').length);
 
-        if (bestBlock) {
-            article = bestBlock;
+        // Score: Text Length penalized by Link Density
+        const linkDensity = linkLen / Math.max(1, textLen);
+        const score = textLen * (1 - linkDensity * 2);
+
+        if (score > maxScore) {
+            maxScore = score;
+            bestBlock = block;
         }
-    }
+    });
 
-    // Fallback if nothing passed the length check
-    if (!article) {
-        article = document.querySelector('article') || document.body;
-    }
+    return bestBlock;
+}
 
-    // 2. Clone to manipulate safely
-    const clone = article.cloneNode(true);
+/**
+ * Removes hidden elements from the clone based on the original DOM.
+ * @param {Element} original 
+ * @param {Element} clone 
+ */
+function removeHiddenElements(original, clone) {
+    if (!original.querySelectorAll) return;
 
-    // 2.1 Remove Hidden Elements (Fix for duplicate content)
-    // Some sites have duplicate content (e.g., mobile vs desktop versions) where one is hidden via display:none.
-    // Since we strip classes/styles later, we must remove these hidden elements now based on the ORIGINAL DOM.
-    if (article.querySelectorAll) {
-        const originals = article.querySelectorAll('*');
-        const clones = clone.querySelectorAll('*');
+    const originals = original.querySelectorAll('*');
+    const clones = clone.querySelectorAll('*');
 
-        // Iterate backwards to safely remove children without affecting indices of future iterations 
-        // (though querySelectorAll is static, removing parents first is more efficient/logical?) 
-        // Actually, forward iteration is fine because clones NodeList is static snapshot.
-        for (let i = 0; i < originals.length; i++) {
-            const original = originals[i];
-
-            // Check if element is hidden
-            // offsetParent is null if display: none (or parent is display: none)
-            if (original.offsetParent === null && original.tagName !== 'SCRIPT' && original.tagName !== 'STYLE') {
-                // Remove corresponding clone
-                // Check if it's already removed (via parent removal)
-                if (clones[i].parentNode) {
-                    clones[i].remove();
-                }
+    for (let i = 0; i < originals.length; i++) {
+        const origEl = originals[i];
+        if (origEl.offsetParent === null && origEl.tagName !== 'SCRIPT' && origEl.tagName !== 'STYLE') {
+            if (clones[i] && clones[i].parentNode) {
+                clones[i].remove();
             }
         }
     }
+}
 
-    // 3. Remove Unwanted Elements (Noise)
+/**
+ * Removes noisy elements (ads, navs, sidebars) from the element.
+ * @param {Element} element 
+ */
+function cleanupNodes(element) {
     const unwantedSelectors = [
         'script', 'style', 'noscript', 'iframe', 'form', 'button', 'input', 'textarea',
         'nav', 'footer', 'header', 'aside',
@@ -176,48 +189,42 @@ function extractContent() {
         '[id*="copyright"]', '[id*="footer"]', '[id*="related"]'
     ];
 
-    // Safety check: Don't remove if the article IS one of these (unlikely but possible with poor semantics)
-    clone.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
+    element.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
+}
 
-    // 4. Attribute Stripping & Cleanup
-    // Instead of selecting specific tags, we walk the tree and clean it.
-    // This preserves Text Nodes (direct text children) and structure (divs used as paragraphs).
-    const walk = document.createTreeWalker(clone, NodeFilter.SHOW_ELEMENT);
+/**
+ * Strips attributes and fixes image sources.
+ * @param {Element} root 
+ */
+function sanitizeAndFixContent(root) {
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
     let currentNode = walk.nextNode(); // Skip root
+
+    const allowedAttrs = ['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original'];
 
     while (currentNode) {
         const el = currentNode;
-        currentNode = walk.nextNode(); // Advance pointer before modification
+        currentNode = walk.nextNode(); // Advance before modifying
 
-        // 4.1 Remove all attributes except "src", "href", "alt", "data-src", "data-original"
+        // 1. Attribute Stripping
         const attrs = [...el.attributes];
         attrs.forEach(attr => {
-            if (!['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original'].includes(attr.name)) {
+            if (!allowedAttrs.includes(attr.name)) {
                 el.removeAttribute(attr.name);
             }
         });
 
-        // 4.2 Handling Images
+        // 2. Image Fixes (Lazy Loading & Styling)
         if (el.tagName === 'IMG') {
-            // Lazy loading fix: often src is hidden in data-src
             const dataSrc = el.getAttribute('data-src') || el.getAttribute('data-original');
-            if (dataSrc) {
-                el.src = dataSrc;
-            }
-            // Enhance basic image styling
+            if (dataSrc) el.src = dataSrc;
+
             el.style.maxWidth = '100%';
             el.style.height = 'auto';
             el.style.display = 'block';
             el.style.margin = '1em auto';
-            continue;
         }
-
-        // 4.3 Unwrap useless containers? (Optional, but 'div' stripping might be risky)
-        // For now, keep structure but rely on CSS to handle it.
     }
-
-    // 5. Return Cleaned HTML
-    return clone.innerHTML;
 }
 
 /**
@@ -231,237 +238,94 @@ function enableReleaf() {
         return;
     }
 
-    // Create the container
+    // 1. Create Core UI Elements
+    const container = createReaderContainer();
+    const content = createContent(contentHtml);
+    const bottomMenu = createBottomMenu(container, content);
+
+    // 2. Assemble DOM
+    container.appendChild(content);
+    container.appendChild(bottomMenu); // Settings popup is attached inside createBottomMenu or separately? 
+    // Actually, let's keep it clean. Settings popup usually sits in container.
+    const { settingsPopup, updateSettingsUI } = createSettingsPopup(container);
+    container.appendChild(settingsPopup);
+
+    // Re-attach settings button click to popup toggle (since they are created separately now)
+    const settingsBtn = bottomMenu.querySelector('[data-role="settings-btn"]');
+    if (settingsBtn) {
+        settingsBtn.onclick = () => container.classList.toggle('releaf-settings-visible');
+        setupTooltip(settingsBtn, "Settings");
+    }
+
+    // Close button logic
+    const closeBtn = bottomMenu.querySelector('[data-role="close-btn"]');
+    if (closeBtn) {
+        setupTooltip(closeBtn, "Close Reader");
+    }
+
+    document.body.appendChild(container);
+    document.body.style.overflow = "hidden";
+
+    // 3. Initialize Logic
+    initializeNavigation(container, content);
+    initializeSettings(container, settingsPopup, updateSettingsUI);
+    setupTutorial(container);
+
+    // 4. Immersive Mode
+    resetIdleTimer();
+    document.addEventListener('mousemove', handleUserActivity);
+    document.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('resize', handleResize);
+}
+
+// --- UI Helper Functions ---
+
+function createReaderContainer() {
     const container = document.createElement("div");
     container.id = RELEAF_Container_ID;
     container.className = "releaf-theme-light"; // Default theme
 
-    // Helper to create SVG icons
-    const createIcon = (svgPath) => {
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("width", "20");
-        svg.setAttribute("height", "20");
-        svg.setAttribute("viewBox", "0 0 24 24");
-        svg.setAttribute("fill", "none");
-        svg.setAttribute("stroke", "currentColor");
-        svg.setAttribute("stroke-width", "2");
-        svg.setAttribute("stroke-linecap", "round");
-        svg.setAttribute("stroke-linejoin", "round");
-        svg.innerHTML = svgPath;
-        return svg;
-    };
+    // Tap detection for navigation
+    setupTapNavigation(container);
 
-    // Icons path data
-    const ICONS = {
-        theme: '<circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>', // Sun
-        close: '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>' // X
-    };
+    return container;
+}
 
-    // Theme Toggle Button (for bottom menu)
-    const themeBtn = document.createElement("button");
-    themeBtn.className = "releaf-btn";
-    themeBtn.title = "Toggle Theme";
-    themeBtn.appendChild(createIcon(ICONS.theme));
-    themeBtn.onclick = () => {
-        const current = container.className;
-        if (current.includes("theme-light")) {
-            container.className = container.className.replace("theme-light", "theme-sepia");
-        } else if (current.includes("theme-sepia")) {
-            container.className = container.className.replace("theme-sepia", "theme-dark");
-        } else {
-            container.className = container.className.replace("theme-dark", "theme-light");
-        }
-    };
-
-    // Font Size Controls
-    let currentFontSize = 20;
-    const minFontSize = 14;
-    const maxFontSize = 32;
-
-    const decreaseFontBtn = document.createElement("button");
-    decreaseFontBtn.className = "releaf-btn";
-    decreaseFontBtn.title = "Decrease Font Size";
-    decreaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold;">A-</span>';
-    decreaseFontBtn.onclick = () => {
-        if (currentFontSize > minFontSize) {
-            currentFontSize -= 2;
-            container.style.setProperty('--releaf-font-size', `${currentFontSize}px`);
-        }
-    };
-
-    const increaseFontBtn = document.createElement("button");
-    increaseFontBtn.className = "releaf-btn";
-    increaseFontBtn.title = "Increase Font Size";
-    increaseFontBtn.innerHTML = '<span style="font-family: serif; font-weight: bold; font-size: 1.2em;">A+</span>';
-    increaseFontBtn.onclick = () => {
-        if (currentFontSize < maxFontSize) {
-            currentFontSize += 2;
-            container.style.setProperty('--releaf-font-size', `${currentFontSize}px`);
-        }
-    };
-
-    // Close Button (Rounded X)
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "releaf-btn";
-    closeBtn.dataset.tooltip = "Close Reader"; // Custom tooltip
-    closeBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="15" y1="9" x2="9" y2="15"></line>
-        <line x1="9" y1="9" x2="15" y2="15"></line>
-    </svg>`;
-    closeBtn.onclick = toggleReleaf;
-
-    // Create the content wrapper
+function createContent(html) {
     const content = document.createElement("div");
     content.className = "releaf-content";
-    content.innerHTML = contentHtml;
+    content.innerHTML = html;
+    return content;
+}
 
-    // Navigation functions (used by touch zones and keyboard)
-    // Precise scroll distance calculation
-    const getPageWidth = () => {
-        const style = window.getComputedStyle(content);
-        const paddingLeft = parseFloat(style.paddingLeft) || 0;
-        const paddingRight = parseFloat(style.paddingRight) || 0;
-        const columnGap = parseFloat(style.columnGap) || 0;
-
-        // Content area width (viewport - visible padding)
-        const visibleContentWidth = content.clientWidth - paddingLeft - paddingRight;
-
-        // Scroll distance = one 'screenful' of content + the gap to the next column
-        return Math.round(visibleContentWidth + columnGap);
-    };
-
-    /**
-     * Sets the scroll position, utilizing CSS transform for overscroll if necessary.
-     * This fixes the "empty column" issue by visually shifting the last page into view
-     * even if the scroll container doesn't technically allow scrolling that far.
-     * @param {number} targetScrollLeft - The desired scrollLeft position
-     */
-    const setScrollPosition = (targetScrollLeft) => {
-        content.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
-
-        // Check if we hit the scroll limit and need to overscroll visually
-        // We use a small timeout to let the smooth scroll start/finish or checking immediately?
-        // Checking immediately is better for setting the transform, but the browser might clamp .scrollTo immediately.
-
-        // Wait a macro-tick for the scroll to be clamped by the browser
-        setTimeout(() => {
-            const maxScroll = content.scrollWidth - content.clientWidth;
-
-            // If we wanted to go further than allowed (with a small buffer for rounding)
-            if (targetScrollLeft > maxScroll + 5) {
-                const overscrollAmount = targetScrollLeft - maxScroll;
-                // Apply transform to shift content left
-                content.style.transform = `translateX(-${overscrollAmount}px)`;
-            } else {
-                // Reset transform if within bounds
-                content.style.transform = 'translateX(0)';
-            }
-        }, 0);
-    };
-
-    const getTotalPages = () => {
-        const pageWidth = getPageWidth();
-        const totalWidth = content.scrollWidth;
-        // Calculate pages (add small buffer for rounding errors)
-        return Math.max(1, Math.ceil((totalWidth - 10) / pageWidth));
-    };
-
-    const goToPrevPage = () => {
-        const pageWidth = getPageWidth();
-        const currentVirtualScroll = getVirtualScroll(content);
-        const targetPage = Math.max(0, Math.floor((currentVirtualScroll - 10) / pageWidth));
-        setScrollPosition(targetPage * pageWidth);
-    };
-
-    const goToNextPage = () => {
-        const pageWidth = getPageWidth();
-        const currentVirtualScroll = getVirtualScroll(content);
-        // Calculate next page position aligned to page width
-        const targetPage = Math.floor((currentVirtualScroll + 10) / pageWidth) + 1;
-
-        // Prevent scrolling past the last page
-        if (targetPage >= getTotalPages()) {
-            // Optional: Bounce effect or just return
-            return;
-        }
-
-        const targetScroll = targetPage * pageWidth;
-
-        setScrollPosition(targetScroll);
-    };
-
-    const toggleMenu = () => {
-        container.classList.toggle('releaf-menu-visible');
-    };
-
-    // Tap detection on container - determines zone based on x position
-    const TAP_THRESHOLD = 10; // pixels - movement less than this is a tap
-    const TAP_TIME_LIMIT = 300; // ms - tap must be faster than this
-    let tapStartX, tapStartY, tapStartTime;
-
-    container.addEventListener('mousedown', (e) => {
-        tapStartX = e.clientX;
-        tapStartY = e.clientY;
-        tapStartTime = Date.now();
-    });
-
-    container.addEventListener('mouseup', (e) => {
-        // Skip if clicking on buttons
-        if (e.target.closest('.releaf-btn') || e.target.closest('.releaf-bottom-menu')) {
-            return;
-        }
-
-        const deltaX = Math.abs(e.clientX - tapStartX);
-        const deltaY = Math.abs(e.clientY - tapStartY);
-        const deltaTime = Date.now() - tapStartTime;
-
-        // Only trigger if it was a quick tap with minimal movement
-        if (deltaX < TAP_THRESHOLD && deltaY < TAP_THRESHOLD && deltaTime < TAP_TIME_LIMIT) {
-            const screenWidth = window.innerWidth;
-            const clickX = e.clientX;
-
-            if (clickX < screenWidth * 0.2) {
-                // Left 20% - Previous page
-                goToPrevPage();
-            } else if (clickX > screenWidth * 0.8) {
-                // Right 20% - Next page
-                goToNextPage();
-            } else {
-                // Center 60% - Toggle menu
-                toggleMenu();
-            }
-        }
-    });
-
-    // Bottom Menu Bar
+function createBottomMenu(container, content) {
     const bottomMenu = document.createElement("div");
     bottomMenu.className = "releaf-bottom-menu";
 
-    // Settings state
-    let currentFontSizeValue = 20;
-    let currentLineHeight = 1.8;
-    let currentMarginV = 80;
-    let currentMarginH = 40;
-
-    // Settings Button (Gear Icon)
+    // Settings Button
     const settingsBtn = document.createElement("button");
     settingsBtn.className = "releaf-btn";
-    settingsBtn.title = ""; // Removed standard title to use custom tooltip
-    settingsBtn.dataset.tooltip = "Settings";
-    // Premium Gear Icon (Lucide-style)
-    settingsBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-        <circle cx="12" cy="12" r="3"></circle>
-    </svg>`;
+    settingsBtn.dataset.role = "settings-btn";
+    settingsBtn.innerHTML = createIconSvg('settings');
 
-    // Toggle settings popup
-    const toggleSettings = () => {
-        container.classList.toggle('releaf-settings-visible');
-    };
-    settingsBtn.onclick = toggleSettings;
+    // Page Counter
+    const pageCounter = createPageCounter(content);
 
-    // Settings Popup
+    // Close Button
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "releaf-btn";
+    closeBtn.dataset.role = "close-btn";
+    closeBtn.innerHTML = createIconSvg('close');
+    closeBtn.onclick = toggleReleaf;
+
+    bottomMenu.appendChild(settingsBtn);
+    bottomMenu.appendChild(pageCounter);
+    bottomMenu.appendChild(closeBtn);
+
+    return bottomMenu;
+}
+
+function createSettingsPopup(container) {
     const settingsPopup = document.createElement("div");
     settingsPopup.className = "releaf-settings-popup";
     settingsPopup.innerHTML = `
@@ -478,63 +342,132 @@ function enableReleaf() {
             <div class="releaf-color-swatch releaf-swatch-dark" data-theme="dark"></div>
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
-                Text Size
-            </span>
+            <span class="releaf-settings-label">${createIconSvg('text')} Text Size</span>
             <input type="range" class="releaf-slider" id="releaf-font-size" min="14" max="32" value="20">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M21 18H3"/></svg>
-                Line Spacing
-            </span>
+            <span class="releaf-settings-label">${createIconSvg('spacing')} Line Spacing</span>
             <input type="range" class="releaf-slider" id="releaf-line-height" min="12" max="24" value="18">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m8 7 4-4 4 4"/><path d="m8 17 4 4 4-4"/></svg>
-                Vertical Margin
-            </span>
+            <span class="releaf-settings-label">${createIconSvg('margin-v')} Vertical Margin</span>
             <input type="range" class="releaf-slider" id="releaf-margin-v" min="40" max="120" value="80">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/></svg>
-                Horizontal Margin
-            </span>
+            <span class="releaf-settings-label">${createIconSvg('margin-h')} Horizontal Margin</span>
             <input type="range" class="releaf-slider" id="releaf-margin-h" min="20" max="80" value="40">
         </div>
         <div class="releaf-settings-row">
-            <span class="releaf-settings-label">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="15" y1="3" y2="3"/><line x1="9" x2="15" y1="21" y2="21"/></svg>
-                Page View
-            </span>
+            <span class="releaf-settings-label">${createIconSvg('view')} Page View</span>
             <div class="releaf-page-view-btns">
-                <button class="releaf-page-view-btn active" data-pages="1" title="Single Page View">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2" /></svg>
-                </button>
-                <button class="releaf-page-view-btn" data-pages="2" title="Two Page View">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><line x1="12" y1="4" x2="12" y2="20" /></svg>
-                </button>
+                <button class="releaf-page-view-btn active" data-pages="1" title="Single Page View">${createIconSvg('page-1')}</button>
+                <button class="releaf-page-view-btn" data-pages="2" title="Two Page View">${createIconSvg('page-2')}</button>
             </div>
         </div>
     `;
 
-    // Wire up close button
-    settingsPopup.querySelector('.releaf-settings-close').onclick = toggleSettings;
+    // Close logic
+    settingsPopup.querySelector('.releaf-settings-close').onclick = () => container.classList.remove('releaf-settings-visible');
 
-    // Close popup when clicking outside
+    // Click outside to close
     container.addEventListener('click', (e) => {
         if (container.classList.contains('releaf-settings-visible')) {
-            // Check if click is outside the popup and not on the settings button
-            if (!settingsPopup.contains(e.target) && !settingsBtn.contains(e.target)) {
+            const settingsBtn = container.querySelector('[data-role="settings-btn"]');
+            if (!settingsPopup.contains(e.target) && (!settingsBtn || !settingsBtn.contains(e.target))) {
                 container.classList.remove('releaf-settings-visible');
             }
         }
     });
 
-    // Wire up color swatches
+    // Helper to update UI elements from state
+    const updateSettingsUI = (items) => {
+        if (items.releaf_theme_id) {
+            settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
+            const active = settingsPopup.querySelector(`.releaf-color-swatch[data-theme="${items.releaf_theme_id}"]`);
+            if (active) active.classList.add('active');
+        }
+        if (items.releaf_fontSize) settingsPopup.querySelector('#releaf-font-size').value = items.releaf_fontSize;
+        if (items.releaf_lineHeight) settingsPopup.querySelector('#releaf-line-height').value = items.releaf_lineHeight * 10;
+        if (items.releaf_marginV) settingsPopup.querySelector('#releaf-margin-v').value = items.releaf_marginV;
+        if (items.releaf_marginH) settingsPopup.querySelector('#releaf-margin-h').value = items.releaf_marginH;
+
+        if (items.releaf_pageView) {
+            settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
+            const btn = settingsPopup.querySelector(`.releaf-page-view-btn[data-pages="${items.releaf_pageView}"]`);
+            if (btn) btn.classList.add('active');
+        }
+    };
+
+    return { settingsPopup, updateSettingsUI };
+}
+
+function createPageCounter(content) {
+    const pageCounter = document.createElement("div");
+    pageCounter.className = "releaf-page-counter";
+    pageCounter.textContent = "1 / 1";
+
+    const update = () => {
+        const container = document.getElementById(RELEAF_Container_ID);
+        if (!container) return; // Should not happen if called from within enableReleaf context
+
+        // We use a simplified total pages calc here or reuse the strict logic?
+        // Let's use the strict logic by re-querying dimensions
+        const style = window.getComputedStyle(content);
+        const pLeft = parseFloat(style.paddingLeft) || 0;
+        const pRight = parseFloat(style.paddingRight) || 0;
+        const gap = parseFloat(style.columnGap) || 0;
+        const effWidth = Math.round(content.clientWidth - pLeft - pRight + gap);
+
+        const totalPages = Math.max(1, Math.ceil((content.scrollWidth - 10) / effWidth));
+        const currentVirtualScroll = getVirtualScroll(content);
+        const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentVirtualScroll + 10) / effWidth) + 1));
+
+        pageCounter.textContent = `${currentPage} / ${totalPages}`;
+    };
+
+    // Attach listener
+    content.addEventListener('scroll', () => window.requestAnimationFrame(update));
+    window.addEventListener('resize', () => {
+        // Also triggers layout update
+        const container = document.getElementById(RELEAF_Container_ID);
+        if (container) updateLayout(content, container);
+        update();
+    });
+
+    // Initial delay update
+    setTimeout(update, 100);
+
+    return pageCounter;
+}
+
+function initializeSettings(container, popup, updateUI) {
+    const save = (key, val) => chrome.storage.sync.set({ [key]: val });
+
+    // Load
+    chrome.storage.sync.get([
+        'releaf_bg', 'releaf_text', 'releaf_accent', 'releaf_theme_id',
+        'releaf_fontSize', 'releaf_lineHeight',
+        'releaf_marginV', 'releaf_marginH',
+        'releaf_pageView'
+    ], (items) => {
+        // Apply to Container
+        if (items.releaf_bg) container.style.setProperty('--releaf-bg-rgb', items.releaf_bg);
+        if (items.releaf_text) container.style.setProperty('--releaf-text-rgb', items.releaf_text);
+        if (items.releaf_accent) container.style.setProperty('--releaf-accent-rgb', items.releaf_accent);
+        if (items.releaf_fontSize) container.style.setProperty('--releaf-font-size', `${items.releaf_fontSize}px`);
+        if (items.releaf_lineHeight) container.style.setProperty('--releaf-line-height', items.releaf_lineHeight);
+        if (items.releaf_marginV) container.style.setProperty('--releaf-margin-v', `${items.releaf_marginV}px`);
+        if (items.releaf_marginH) container.style.setProperty('--releaf-margin-h', `${items.releaf_marginH}px`);
+        if (items.releaf_pageView === '2') container.classList.add('releaf-2page');
+
+        // Update UI
+        updateUI(items);
+
+        // Initial Layout Update after applying settings
+        setTimeout(() => updateLayout(container.querySelector('.releaf-content'), container), 50);
+    });
+
+    // Wire up Inputs
     const themeColors = {
         light: { bg: '255, 255, 255', text: '34, 34, 34', accent: '234, 234, 234' },
         sepia: { bg: '252, 246, 229', text: '74, 60, 49', accent: '234, 221, 207' },
@@ -544,356 +477,281 @@ function enableReleaf() {
         dark: { bg: '26, 26, 26', text: '212, 212, 212', accent: '51, 51, 51' }
     };
 
-    settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(swatch => {
+    popup.querySelectorAll('.releaf-color-swatch').forEach(swatch => {
         swatch.onclick = () => {
-            // Remove active from all
-            settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
+            popup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
             swatch.classList.add('active');
-
             const theme = swatch.dataset.theme;
             const colors = themeColors[theme];
+
             container.style.setProperty('--releaf-bg-rgb', colors.bg);
             container.style.setProperty('--releaf-text-rgb', colors.text);
             container.style.setProperty('--releaf-accent-rgb', colors.accent);
 
-            // Save theme
-            chrome.storage.sync.set({
-                releaf_bg: colors.bg,
-                releaf_text: colors.text,
-                releaf_accent: colors.accent,
-                releaf_theme_id: theme
-            });
+            save('releaf_bg', colors.bg);
+            save('releaf_text', colors.text);
+            save('releaf_accent', colors.accent);
+            save('releaf_theme_id', theme);
         };
     });
 
-    // Wire up sliders
-    settingsPopup.querySelector('#releaf-font-size').oninput = (e) => {
-        const val = e.target.value;
-        container.style.setProperty('--releaf-font-size', `${val}px`);
-        currentFontSize = parseInt(val); // Update local var for A+/A- buttons
-        saveSetting('releaf_fontSize', val);
+    popup.querySelector('#releaf-font-size').oninput = (e) => {
+        container.style.setProperty('--releaf-font-size', `${e.target.value}px`);
+        save('releaf_fontSize', e.target.value);
     };
 
-    settingsPopup.querySelector('#releaf-line-height').oninput = (e) => {
+    popup.querySelector('#releaf-line-height').oninput = (e) => {
         const val = (e.target.value / 10).toFixed(1);
         container.style.setProperty('--releaf-line-height', val);
-        saveSetting('releaf_lineHeight', val);
+        save('releaf_lineHeight', val);
     };
 
-    settingsPopup.querySelector('#releaf-margin-v').oninput = (e) => {
-        const val = e.target.value;
-        container.style.setProperty('--releaf-margin-v', `${val}px`);
-        saveSetting('releaf_marginV', val);
+    popup.querySelector('#releaf-margin-v').oninput = (e) => {
+        container.style.setProperty('--releaf-margin-v', `${e.target.value}px`);
+        save('releaf_marginV', e.target.value);
     };
 
-    settingsPopup.querySelector('#releaf-margin-h').oninput = (e) => {
-        const val = e.target.value;
-        container.style.setProperty('--releaf-margin-h', `${val}px`);
-        saveSetting('releaf_marginH', val);
+    popup.querySelector('#releaf-margin-h').oninput = (e) => {
+        container.style.setProperty('--releaf-margin-h', `${e.target.value}px`);
+        save('releaf_marginH', e.target.value);
+        updateLayout(container.querySelector('.releaf-content'), container);
     };
 
-    // Wire up page view buttons
-    settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(btn => {
+    popup.querySelectorAll('.releaf-page-view-btn').forEach(btn => {
         btn.onclick = () => {
-            // Update active state
-            settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
+            popup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
-            // Toggle 2-page mode
             const pages = btn.dataset.pages;
-            if (pages === '2') {
-                container.classList.add('releaf-2page');
-            } else {
-                container.classList.remove('releaf-2page');
-            }
-            saveSetting('releaf_pageView', pages);
+
+            if (pages === '2') container.classList.add('releaf-2page');
+            else container.classList.remove('releaf-2page');
+
+            save('releaf_pageView', pages);
+            updateLayout(container.querySelector('.releaf-content'), container);
         };
     });
+}
 
-    // Tutorial Logic
-    const launchTutorial = () => {
-        // Create Overlay
-        const overlay = document.createElement("div");
-        overlay.className = "releaf-tutorial-overlay";
+function initializeNavigation(container, content) {
+    // We reuse the global 'handleKeyNavigation' but we need to ensure it works.
+    // The previous implementation added listener to 'document' for keydown.
+    // That's done in enableReleaf.
 
-        const card = document.createElement("div");
-        card.className = "releaf-tutorial-card";
-        // Relative position for close button
-        card.style.position = 'relative';
-        overlay.appendChild(card);
-        container.appendChild(overlay);
+    // Tap Navigation
+    // setupTapNavigation is called in createReaderContainer
+}
 
-        let currentStep = 0;
-        const steps = [
-            {
-                title: `Welcome to Re:Leaf! <img src="${chrome.runtime.getURL('src/assets/logo.png')}" class="releaf-tutorial-logo" alt="Leaf Logo"/>`,
-                text: "Tap <b>Left/Right</b> to turn pages.<br>Tap <b>Center</b> to show the menu.",
-                action: () => {
-                    // Show zone indicators
-                    const leftZone = document.createElement('div');
-                    leftZone.className = 'releaf-zone-indicator releaf-zone-left';
-                    leftZone.textContent = 'Prev';
-                    overlay.appendChild(leftZone);
-
-                    const rightZone = document.createElement('div');
-                    rightZone.className = 'releaf-zone-indicator releaf-zone-right';
-                    rightZone.textContent = 'Next';
-                    overlay.appendChild(rightZone);
-                },
-                cleanup: () => {
-                    overlay.querySelectorAll('.releaf-zone-indicator').forEach(el => el.remove());
-                }
-            },
-            {
-                title: "Customization",
-                text: "Click the <b>Settings Gear</b> to change themes, font size, and spacing."
-            },
-            {
-                title: "Finished Reading?",
-                text: "Click the <b>Close Button</b> or press <b>Escape</b> to return to the original page."
-            }
-        ];
-
-        const closeTutorial = (finished = false) => {
-            const dontShowAgain = card.querySelector('#releaf-dont-show-again')?.checked;
-
-            // Save if finished OR if user explicitly checked "Don't show again"
-            if (finished || dontShowAgain) {
-                chrome.storage.sync.set({ releaf_hasSeenTutorial: true });
-            }
-
-            overlay.classList.remove('visible');
-            setTimeout(() => overlay.remove(), 300);
-        };
-
-        const showStep = (index) => {
-            if (index >= steps.length) {
-                closeTutorial(true);
-                return;
-            }
-
-            const step = steps[index];
-
-            // Clean up previous
-            if (index > 0 && steps[index - 1].cleanup) steps[index - 1].cleanup();
-            if (index > 0 && steps[index - 1].target) steps[index - 1].target.classList.remove('releaf-highlight');
-
-            // Setup new step
-            const isLast = index === steps.length - 1;
-            card.innerHTML = `
-                <button class="releaf-tutorial-close" title="Close">×</button>
-                <h3>${step.title}</h3>
-                <p>${step.text}</p>
-                <div class="releaf-tutorial-footer">
-                    <label class="releaf-tutorial-checkbox">
-                        <input type="checkbox" id="releaf-dont-show-again">
-                        Don't show again
-                    </label>
-                    <button class="releaf-tutorial-btn">${isLast ? "All Done!" : "Next"}</button>
-                </div>
-            `;
-
-            // Handle target highlight
-            if (step.target) {
-                step.target.classList.add('releaf-highlight');
-
-                // FORCE SHOW UI: Remove immersive hide AND add menu visible class
-                container.classList.remove('releaf-ui-hidden');
-                container.classList.add('releaf-menu-visible');
-            }
-
-            // Run action if any
-            if (step.action) step.action();
-
-            // Bind Next/Finish button
-            card.querySelector('.releaf-tutorial-btn').onclick = () => {
-                currentStep++;
-                showStep(currentStep);
-            };
-
-            // Bind Close button
-            card.querySelector('.releaf-tutorial-close').onclick = () => closeTutorial(false);
-
-            // Show overlay
-            requestAnimationFrame(() => overlay.classList.add('visible'));
-        };
-
-        // Start
-        showStep(0);
-    };
-
-    // Load settings & Check Tutorial
-    const loadSettings = () => {
-        chrome.storage.sync.get([
-            'releaf_bg', 'releaf_text', 'releaf_accent', 'releaf_theme_id',
-            'releaf_fontSize', 'releaf_lineHeight',
-            'releaf_marginV', 'releaf_marginH',
-            'releaf_pageView',
-            'releaf_hasSeenTutorial'
-        ], (items) => {
-            if (items.releaf_bg) container.style.setProperty('--releaf-bg-rgb', items.releaf_bg);
-            if (items.releaf_text) container.style.setProperty('--releaf-text-rgb', items.releaf_text);
-            if (items.releaf_accent) container.style.setProperty('--releaf-accent-rgb', items.releaf_accent);
-
-            if (items.releaf_theme_id) {
-                settingsPopup.querySelectorAll('.releaf-color-swatch').forEach(s => s.classList.remove('active'));
-                const activeSwatch = settingsPopup.querySelector(`.releaf-color-swatch[data-theme="${items.releaf_theme_id}"]`);
-                if (activeSwatch) activeSwatch.classList.add('active');
-            }
-
-            if (items.releaf_fontSize) {
-                container.style.setProperty('--releaf-font-size', `${items.releaf_fontSize}px`);
-                settingsPopup.querySelector('#releaf-font-size').value = items.releaf_fontSize;
-                currentFontSize = parseInt(items.releaf_fontSize);
-            }
-
-            if (items.releaf_lineHeight) {
-                container.style.setProperty('--releaf-line-height', items.releaf_lineHeight);
-                settingsPopup.querySelector('#releaf-line-height').value = items.releaf_lineHeight * 10;
-            }
-
-            if (items.releaf_marginV) {
-                container.style.setProperty('--releaf-margin-v', `${items.releaf_marginV}px`);
-                settingsPopup.querySelector('#releaf-margin-v').value = items.releaf_marginV;
-            }
-
-            if (items.releaf_marginH) {
-                container.style.setProperty('--releaf-margin-h', `${items.releaf_marginH}px`);
-                settingsPopup.querySelector('#releaf-margin-h').value = items.releaf_marginH;
-            }
-
-            if (items.releaf_pageView) {
-                settingsPopup.querySelectorAll('.releaf-page-view-btn').forEach(b => b.classList.remove('active'));
-                const btn = settingsPopup.querySelector(`.releaf-page-view-btn[data-pages="${items.releaf_pageView}"]`);
-                if (btn) btn.classList.add('active');
-
-                if (items.releaf_pageView === '2') {
-                    container.classList.add('releaf-2page');
-                } else {
-                    container.classList.remove('releaf-2page');
-                }
-            }
-
-            // Launch Tutorial if not seen
-            if (!items.releaf_hasSeenTutorial) {
-                setTimeout(launchTutorial, 500); // Slight delay for smooth entry
-            }
-        });
-    };
-
-    // Helper to save settings
-    const saveSetting = (key, value) => {
-        chrome.storage.sync.set({ [key]: value });
-    };
-
-    // Load settings initially
-    loadSettings();
-
-    // Page Counter
-    const pageCounter = document.createElement("div");
-    pageCounter.className = "releaf-page-counter";
-    pageCounter.textContent = "1 / 1"; // Initial state
-
-    // Logic to enforce strict column widths
-    const updateLayout = () => {
-        const hMargin = currentMarginH || 40;
-        const availableWidth = window.innerWidth - (hMargin * 2);
-
-        // Match CSS calc: gap is fixed at 60px
-        const gap = 60;
-        const colWidth = (availableWidth - gap) / 2;
-
-        // Set the variable that CSS will use for column-width
-        container.style.setProperty('--releaf-column-width', `${colWidth}px`);
-    };
-
-    // Update page counter function
-    const updatePageCount = () => {
-        const pageWidth = getPageWidth();
-        const currentVirtualScroll = getVirtualScroll(content);
-
-        // Calculate pages (add small buffer for rounding errors)
-        const totalPages = getTotalPages();
-        const currentPage = Math.min(totalPages, Math.max(1, Math.floor((currentVirtualScroll + 10) / pageWidth) + 1));
-
-        pageCounter.textContent = `${currentPage} / ${totalPages}`;
-    };
-
-    // Update on scroll (only update text)
-    content.addEventListener('scroll', () => {
-        window.requestAnimationFrame(updatePageCount);
+function setupTapNavigation(container) {
+    let tapStartX, tapStartY, tapStartTime;
+    container.addEventListener('mousedown', (e) => {
+        tapStartX = e.clientX;
+        tapStartY = e.clientY;
+        tapStartTime = Date.now();
     });
 
-    // Update layout AND text on resize
-    window.addEventListener('resize', () => {
-        updateLayout();
-        updatePageCount();
-    });
+    container.addEventListener('mouseup', (e) => {
+        if (e.target.closest('.releaf-btn') || e.target.closest('.releaf-bottom-menu') || e.target.closest('.releaf-settings-popup')) return;
 
-    // Also update when settings change (font size, margins, view mode etc)
-    const observer = new MutationObserver(() => {
-        // Refresh local margin variable if needed
-        const valH = container.style.getPropertyValue('--releaf-margin-h');
-        if (valH) currentMarginH = parseInt(valH);
+        const deltaX = Math.abs(e.clientX - tapStartX);
+        const deltaY = Math.abs(e.clientY - tapStartY);
+        if (deltaX < 10 && deltaY < 10 && (Date.now() - tapStartTime) < 300) {
+            const width = window.innerWidth;
+            const content = container.querySelector('.releaf-content');
 
-        updateLayout();
-        updatePageCount();
-    });
-    observer.observe(container, { attributes: true, attributeFilter: ['style', 'class'] });
-
-    // Initial update after layout
-    setTimeout(() => {
-        updateLayout();
-        updatePageCount();
-    }, 100);
-
-    // Tooltip Helper
-    const showTooltip = (target, text) => {
-        let tooltip = document.getElementById('releaf-tooltip');
-        if (!tooltip) {
-            tooltip = document.createElement('div');
-            tooltip.id = 'releaf-tooltip';
-            tooltip.className = 'releaf-tooltip';
-            document.body.appendChild(tooltip);
+            if (e.clientX < width * 0.2) navigatePage(content, -1);
+            else if (e.clientX > width * 0.8) navigatePage(content, 1);
+            else container.classList.toggle('releaf-menu-visible');
         }
-        tooltip.textContent = text;
-        const rect = target.getBoundingClientRect();
-        tooltip.style.left = `${rect.left + rect.width / 2}px`;
-        tooltip.style.bottom = `${window.innerHeight - rect.top + 8}px`; // Position above
-        tooltip.classList.add('visible');
-    };
-
-    const hideTooltip = () => {
-        const tooltip = document.getElementById('releaf-tooltip');
-        if (tooltip) tooltip.classList.remove('visible');
-    };
-
-    // Attach tooltips
-    [settingsBtn, closeBtn].forEach(btn => {
-        btn.addEventListener('mouseenter', (e) => showTooltip(e.currentTarget, e.currentTarget.dataset.tooltip));
-        btn.addEventListener('mouseleave', hideTooltip);
     });
+}
 
-    // Add to bottom menu (Order: Settings | Counter | Close)
-    bottomMenu.appendChild(settingsBtn);
-    bottomMenu.appendChild(pageCounter);
-    bottomMenu.appendChild(closeBtn);
+function navigatePage(content, direction) {
+    // Better to use strict calc if possible, but window width is close enough for navigation targets
+    const currentVirtual = getVirtualScroll(content);
 
-    container.appendChild(content);
-    container.appendChild(settingsPopup);
-    container.appendChild(bottomMenu);
-    document.body.appendChild(container);
+    // Calculate precise page width using the layout helper logic if needed
+    // For now, simple logic reused:
+    const style = window.getComputedStyle(content);
+    const pLeft = parseFloat(style.paddingLeft) || 0;
+    const pRight = parseFloat(style.paddingRight) || 0;
+    const gap = parseFloat(style.columnGap) || 0;
+    const effWidth = Math.round(content.clientWidth - pLeft - pRight + gap);
 
-    // Prevent background scrolling
-    document.body.style.overflow = "hidden";
+    const targetPage = Math.floor((currentVirtual + (direction * 10)) / effWidth) + direction;
+    // Bounds check
+    const totalPages = Math.max(1, Math.ceil((content.scrollWidth - 10) / effWidth));
 
-    // Start Immersive Mode Timer
-    resetIdleTimer();
+    if (targetPage < 0) setScrollPosition(content, 0);
+    else if (targetPage >= totalPages) return; // Stop at end
+    else setScrollPosition(content, targetPage * effWidth);
+}
 
-    // Add Immersive Mode Listeners
-    document.addEventListener('mousemove', handleUserActivity);
-    document.addEventListener('keydown', handleUserActivity);
-    window.addEventListener('resize', handleResize);
+function setupTutorial(container) {
+    chrome.storage.sync.get('releaf_hasSeenTutorial', (items) => {
+        if (!items.releaf_hasSeenTutorial) {
+            setTimeout(() => launchTutorial(container), 500);
+        }
+    });
+}
+
+function launchTutorial(container) {
+    const overlay = document.createElement("div");
+    overlay.className = "releaf-tutorial-overlay";
+    const card = document.createElement("div");
+    card.className = "releaf-tutorial-card";
+    // Relative position for close button
+    card.style.position = 'relative';
+    overlay.appendChild(card);
+    container.appendChild(overlay);
+
+    let currentStep = 0;
+    const steps = [
+        {
+            title: `Welcome to Re:Leaf! <img src="${chrome.runtime.getURL('src/assets/logo.png')}" class="releaf-tutorial-logo" alt="Leaf Logo"/>`,
+            text: "Tap <b>Left/Right</b> to turn pages.<br>Tap <b>Center</b> to show the menu.",
+            action: () => {
+                // Show zone indicators
+                const leftZone = document.createElement('div');
+                leftZone.className = 'releaf-zone-indicator releaf-zone-left';
+                leftZone.textContent = 'Prev';
+                overlay.appendChild(leftZone);
+
+                const rightZone = document.createElement('div');
+                rightZone.className = 'releaf-zone-indicator releaf-zone-right';
+                rightZone.textContent = 'Next';
+                overlay.appendChild(rightZone);
+            },
+            cleanup: () => {
+                overlay.querySelectorAll('.releaf-zone-indicator').forEach(el => el.remove());
+            }
+        },
+        {
+            title: "Customization",
+            text: "Click the <b>Settings Gear</b> to change themes, font size, and spacing."
+        },
+        {
+            title: "Finished Reading?",
+            text: "Click the <b>Close Button</b> or press <b>Escape</b> to return to the original page."
+        }
+    ];
+
+    const closeTutorial = (finished = false) => {
+        const dontShowAgain = card.querySelector('#releaf-dont-show-again')?.checked;
+
+        // Save if finished OR if user explicitly checked "Don't show again"
+        if (finished || dontShowAgain) {
+            chrome.storage.sync.set({ releaf_hasSeenTutorial: true });
+        }
+
+        overlay.classList.remove('visible');
+        setTimeout(() => overlay.remove(), 300);
+    };
+
+    const showStep = (index) => {
+        if (index >= steps.length) {
+            closeTutorial(true);
+            return;
+        }
+
+        const step = steps[index];
+
+        // Clean up previous
+        if (index > 0 && steps[index - 1].cleanup) steps[index - 1].cleanup();
+        if (index > 0 && steps[index - 1].target) steps[index - 1].target.classList.remove('releaf-highlight');
+
+        // Setup new step
+        const isLast = index === steps.length - 1;
+        card.innerHTML = `
+            <button class="releaf-tutorial-close" title="Close">✕</button>
+            <h3>${step.title}</h3>
+            <p>${step.text}</p>
+            <div class="releaf-tutorial-footer">
+                <label class="releaf-tutorial-checkbox">
+                    <input type="checkbox" id="releaf-dont-show-again">
+                    Don't show again
+                </label>
+                <button class="releaf-tutorial-btn">${isLast ? "All Done!" : "Next"}</button>
+            </div>
+        `;
+
+        // Handle target highlight
+        if (step.target) {
+            step.target.classList.add('releaf-highlight');
+
+            // FORCE SHOW UI: Remove immersive hide AND add menu visible class
+            container.classList.remove('releaf-ui-hidden');
+            container.classList.add('releaf-menu-visible');
+        }
+
+        // Run action if any
+        if (step.action) step.action();
+
+        // Bind Next/Finish button
+        card.querySelector('.releaf-tutorial-btn').onclick = () => {
+            currentStep++;
+            showStep(currentStep);
+        };
+
+        // Bind Close button
+        card.querySelector('.releaf-tutorial-close').onclick = () => closeTutorial(false);
+
+        // Show overlay
+        requestAnimationFrame(() => overlay.classList.add('visible'));
+    };
+
+    // Start
+    showStep(0);
+}
+
+function updateLayout(content, container) {
+    if (!content || !container) return;
+    const hMarginRaw = container.style.getPropertyValue('--releaf-margin-h');
+    const hMargin = parseInt(hMarginRaw) || 40;
+    const availableWidth = window.innerWidth - (hMargin * 2);
+    const gap = 60; // Fixed CSS gap
+    const colWidth = (availableWidth - gap) / 2;
+    container.style.setProperty('--releaf-column-width', `${colWidth}px`);
+}
+
+function createIconSvg(name) {
+    const icons = {
+        settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle>',
+        close: '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>',
+        text: '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+        spacing: '<path d="M21 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M21 18H3"/>',
+        'margin-v': '<path d="M12 3v18"/><path d="m8 7 4-4 4 4"/><path d="m8 17 4 4 4-4"/>',
+        'margin-h': '<path d="M3 12h18"/><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/>',
+        view: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="15" y1="3" y2="3"/><line x1="9" x2="15" y1="21" y2="21"/>',
+        'page-1': '<rect x="5" y="4" width="14" height="16" rx="2" />',
+        'page-2': '<rect x="4" y="4" width="16" height="16" rx="2" /><line x1="12" y1="4" x2="12" y2="20" />'
+    };
+    return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[name] || ''}</svg>`;
+}
+
+function showTooltip(target, text) {
+    let tooltip = document.getElementById('releaf-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'releaf-tooltip';
+        tooltip.className = 'releaf-tooltip';
+        document.body.appendChild(tooltip);
+    }
+    tooltip.textContent = text;
+    const rect = target.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+    tooltip.style.bottom = `${window.innerHeight - rect.top + 8}px`; // Position above
+    tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+    const tooltip = document.getElementById('releaf-tooltip');
+    if (tooltip) tooltip.classList.remove('visible');
+}
+
+function setupTooltip(element, text) {
+    element.dataset.tooltip = text;
+    element.addEventListener('mouseenter', (e) => showTooltip(e.currentTarget, text));
+    element.addEventListener('mouseleave', hideTooltip);
 }
 
 let idleTimer;
@@ -1001,5 +859,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Export functions for testing if using a module system (Jest usually needs CommonJS or Babel)
 if (typeof module !== "undefined" && module.exports) {
-    module.exports = { toggleReleaf, enableReleaf, extractContent };
+    module.exports = {
+        toggleReleaf,
+        enableReleaf,
+        extractContent,
+        // Helpers for testing
+        findMainContent,
+        findBestBlockByDensity,
+        removeHiddenElements,
+        cleanupNodes,
+        sanitizeAndFixContent,
+        createReaderContainer,
+        createContent,
+        createBottomMenu,
+        createSettingsPopup,
+        createPageCounter,
+        initializeSettings,
+        initializeNavigation,
+        setupTutorial,
+        createIconSvg
+    };
 }
