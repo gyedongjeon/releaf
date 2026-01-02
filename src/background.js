@@ -19,7 +19,11 @@ chrome.action.onClicked.addListener(async (tab) => {
       // Dynamically inject the script
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ["src/content.js"]
+        files: [
+          "src/content/utils.js",
+          "src/content/ui.js",
+          "src/content/main.js"
+        ]
       });
 
       // Also ensure CSS is present (though manifest usually handles this, dynamic injection might need it)
