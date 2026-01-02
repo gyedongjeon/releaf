@@ -283,6 +283,41 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(div.firstElementChild.textContent).toBe(title);
     });
 
+    test('Should restore title if it was removed by cleanup (Wikipedia Style)', () => {
+        // Wikipedia: H1 is often in a <header> or div that gets cleaned up.
+        // Setup: Main content has H1 inside <header>, and body text.
+        const title = "Wikipedia Article Title";
+        const bodyText = "This is the encyclopedia content. ".repeat(20);
+
+        document.body.innerHTML = `
+            <main id="content">
+                <header class="mw-body-header">
+                    <h1>${title}</h1>
+                </header>
+                <div id="bodyContent">
+                    <p>${bodyText}</p>
+                </div>
+            </main>
+        `;
+
+        // 1. extractContent finds 'main#content' (contains header + body)
+        // 2. removeHiddenElements...
+        // 3. cleanupNodes removes <header> (so H1 is GONE from clone)
+        // 4. sanitizeAndFixContent...
+        // 5. title fallback checks for H1. It's gone.
+        // 6. It finds doc H1 and prepends it.
+
+        const extracted = extractContent();
+
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+
+        // H1 should be present (restored)
+        expect(div.querySelector('h1')).not.toBeNull();
+        expect(div.querySelector('h1').textContent).toBe(title);
+        expect(extracted).toContain(bodyText);
+    });
+
     test('Should clean attributes but preserve href and src', () => {
         setupContent(`
             <div id="main">
