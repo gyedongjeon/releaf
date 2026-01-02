@@ -20,7 +20,9 @@ function findMainContent(root) {
         '.entry-content', '#story-body',
         '.content', '#content-area', '.page-content',
         '[role="main"]', '.post-body', '.report-content',
-        '.document-body', '#report-body'
+        '.document-body', '#report-body',
+        // ZDNet Korea & Generic Schema.org
+        '#articleBody', '[itemprop="articleBody"]', '.view_cont'
     ];
 
     for (const selector of candidates) {
@@ -193,7 +195,23 @@ function extractContent() {
     cleanupNodes(clone);
 
     // Strip attributes and fix images
+    // Strip attributes and fix images
     sanitizeAndFixContent(clone);
+
+    // Heuristic: If the extracted content doesn't have an H1, try to find one in the doc
+    // and prepend it. Use the first H1 found in the document.
+    const hasTitle = clone.querySelector('h1');
+    if (!hasTitle) {
+        const docTitle = document.querySelector('h1');
+        if (docTitle) {
+            const titleClone = docTitle.cloneNode(true);
+            // Ensure title is clean
+            titleClone.removeAttribute('class');
+            titleClone.removeAttribute('id');
+            titleClone.removeAttribute('style');
+            clone.insertBefore(titleClone, clone.firstChild);
+        }
+    }
 
     return clone.innerHTML;
 }

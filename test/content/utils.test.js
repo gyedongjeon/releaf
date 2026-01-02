@@ -253,6 +253,36 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(extracted).not.toContain('Related News');
     });
 
+    test('Should prepend document title if missing in extracted content (ZDNet Style)', () => {
+        // ZDNet: Title is h1 outside, content is #articleBody
+        const title = "ZDNet News Title";
+        const bodyContent = "This is the actual news content. ".repeat(20); // > 200 chars to pass heuristic
+        document.body.innerHTML = `
+            <div class="header">
+                <h1>${title}</h1>
+            </div>
+            <div class="wrapper">
+                <div id="articleBody">
+                    <p>${bodyContent}</p>
+                </div>
+            </div>
+        `;
+
+        const extracted = extractContent();
+
+        // It should extract #articleBody (because it's in the list now)
+        expect(extracted).toContain(bodyContent);
+
+        // It should ALSO contain the title, because we appended it manually
+        expect(extracted).toContain(title);
+
+        // Check order: Title first
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+        expect(div.firstElementChild.tagName).toBe('H1');
+        expect(div.firstElementChild.textContent).toBe(title);
+    });
+
     test('Should clean attributes but preserve href and src', () => {
         setupContent(`
             <div id="main">
