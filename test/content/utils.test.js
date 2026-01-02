@@ -318,12 +318,20 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(extracted).toContain(bodyText);
     });
 
-    test('Should extract missing summary and remove ads (NYT Style)', () => {
+    test('Should extract missing summary, lead image, and remove ads (NYT Style)', () => {
         const title = "NYT Article Title";
         const summary = "This is the article summary.";
         const bodyText = "This is the lengthy article content. ".repeat(20);
+        const imageUrl = "lead-image.jpg";
+        const captionText = "A caption for the lead image.";
 
         document.body.innerHTML = `
+             <header>
+                 <figure>
+                     <img src="${imageUrl}" />
+                     <figcaption>${captionText}</figcaption>
+                 </figure>
+             </header>
              <div id="top-wrapper">
                  <div id="top-slug">Advertisement</div>
                  <a href="#">SKIP ADVERTISEMENT</a>
@@ -337,32 +345,37 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
              </main>
          `;
 
-        // 1. extractContent selects 'section[name="articleBody"]' (specifically added in utils)
-        // 2. It misses #article-summary (outside)
-        // 3. It misses H1 (outside)
-        // 4. cleanupNodes should handle #top-wrapper? (Not in body content though)
+        // 1. extractContent selects 'section[name="articleBody"]'
+        // 2. Misses H1, Summary, Image
+        // 3. Fallbacks should restore all three in order: H1 -> Summary -> Image -> Body
 
         const extracted = extractContent();
         const div = document.createElement('div');
         div.innerHTML = extracted;
 
-        // Verify Title restored
+        // Verify Title
         const h1 = div.querySelector('h1');
         expect(h1).not.toBeNull();
         expect(h1.textContent).toBe(title);
 
-        // Verify Summary restored
+        // Verify Summary (after H1)
         const sumEl = div.querySelector('#article-summary');
         expect(sumEl).not.toBeNull();
-        expect(sumEl.textContent).toBe(summary);
-
-        // Verify Summary position (after H1)
         expect(h1.nextElementSibling).toBe(sumEl);
+
+        // Verify Lead Image (after Summary)
+        const figure = div.querySelector('figure');
+        expect(figure).not.toBeNull();
+        expect(figure.querySelector('img').getAttribute('src')).toBe(imageUrl);
+        expect(figure.querySelector('figcaption').textContent).toBe(captionText);
+
+        // Verify Image position (after Summary)
+        expect(sumEl.nextElementSibling).toBe(figure);
 
         // Verify Body content
         expect(extracted).toContain(bodyText);
 
-        // Verify Ad Noise not present (it wasn't in body anyway, but good to check)
+        // Verify Ad Noise not present
         expect(extracted).not.toContain('SKIP ADVERTISEMENT');
     });
 

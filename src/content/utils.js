@@ -222,12 +222,15 @@ function extractContent() {
 
     // Heuristic: Check for missing article summary/subtitle (common in NYT)
     const hasSummary = clone.querySelector('#article-summary');
+    let summaryElement = hasSummary;
+
     if (!hasSummary) {
         const docSummary = document.querySelector('#article-summary');
         if (docSummary) {
             const summaryClone = docSummary.cloneNode(true);
             summaryClone.removeAttribute('class');
             summaryClone.removeAttribute('style');
+
             // Insert after title if possible, otherwise at top
             if (titleElement && titleElement.nextSibling) {
                 clone.insertBefore(summaryClone, titleElement.nextSibling);
@@ -237,6 +240,33 @@ function extractContent() {
             } else {
                 // No title, prepend
                 clone.insertBefore(summaryClone, clone.firstChild);
+            }
+            summaryElement = summaryClone;
+        }
+    }
+
+    // Heuristic: Check for missing lead image (NYT: figure in header)
+    const hasImage = clone.querySelector('img') || clone.querySelector('figure');
+    if (!hasImage) {
+        // Try specific selectors for lead images/figures outside body
+        const leadFigure = document.querySelector('header figure') || document.querySelector('figure');
+
+        if (leadFigure) {
+            const figureClone = leadFigure.cloneNode(true);
+            // Clean up figure
+            figureClone.removeAttribute('class');
+            figureClone.removeAttribute('style');
+            sanitizeAndFixContent(figureClone); // Apply standard image fixes
+
+            // Insert location: After summary (if exists), or After title, or Top
+            let insertTarget = summaryElement || titleElement;
+
+            if (insertTarget && insertTarget.nextSibling) {
+                clone.insertBefore(figureClone, insertTarget.nextSibling);
+            } else if (insertTarget) {
+                clone.appendChild(figureClone);
+            } else {
+                clone.insertBefore(figureClone, clone.firstChild);
             }
         }
     }
