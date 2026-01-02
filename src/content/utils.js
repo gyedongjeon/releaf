@@ -22,7 +22,9 @@ function findMainContent(root) {
         '[role="main"]', '.post-body', '.report-content',
         '.document-body', '#report-body',
         // ZDNet Korea & Generic Schema.org
-        '#articleBody', '[itemprop="articleBody"]', '.view_cont'
+        '#articleBody', '[itemprop="articleBody"]', '.view_cont',
+        // Global Giants (NYT, Dev.to, Substack)
+        'section[name="articleBody"]', '#article-body', '.body.markup'
     ];
 
     for (const selector of candidates) {
