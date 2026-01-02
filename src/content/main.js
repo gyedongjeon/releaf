@@ -226,7 +226,10 @@ function setupTapNavigation(container) {
     });
 
     container.addEventListener('mouseup', (e) => {
-        if (e.target.closest('.releaf-btn') || e.target.closest('.releaf-bottom-menu') || e.target.closest('.releaf-settings-popup')) return;
+        if (e.target.closest('.releaf-btn') ||
+            e.target.closest('.releaf-bottom-menu') ||
+            e.target.closest('.releaf-settings-popup') ||
+            e.target.closest('[data-action]')) return;
 
         const deltaX = Math.abs(e.clientX - tapStartX);
         const deltaY = Math.abs(e.clientY - tapStartY);
