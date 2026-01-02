@@ -706,3 +706,21 @@
    We might need to add a class to the menu via JS if :has isn't reliable enough,
    but for a modern extension, :has is safe (Chrome 105+).
 */
+/* Video Placeholder (ReLeaf) */
+.releaf-video-placeholder {
+    margin: 2rem 0;
+    text-align: center;
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 8px;
+}
+.releaf-video-placeholder figcaption {
+    font-weight: bold;
+    margin-top: 0.5rem;
+    color: #555;
+}
+
+/* Ensure images in placeholder are responsive */
+.releaf-video-placeholder img {
+    margin: 0 auto;
+}

@@ -147,6 +147,48 @@ function cleanupNodes(element) {
     element.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
 }
 
+
+/**
+ * Transforms complex video blocks (like BBC) into simple, visible placeholders.
+ * @param {Element} root 
+ */
+function transformVideoBlocks(root) {
+    // 1. BBC Video Blocks
+    const bbcVideos = root.querySelectorAll('div[data-component="video-block"]');
+    bbcVideos.forEach(block => {
+        const img = block.querySelector('img');
+        if (img) {
+            const figure = document.createElement('figure');
+            figure.style.margin = '2rem 0';
+            figure.style.textAlign = 'center';
+            figure.className = 'releaf-video-placeholder'; // Marker for testing/styling
+
+            const newImg = img.cloneNode(true);
+            // newImg is handled by sanitizeAndFixContent later, but we ensure it's clean here too
+            newImg.style.width = '100%';
+            newImg.style.height = 'auto';
+            newImg.style.display = 'block';
+
+            const caption = document.createElement('figcaption');
+            caption.textContent = '▶ [Video Content]';
+            caption.style.fontWeight = 'bold';
+            caption.style.marginTop = '0.5rem';
+            caption.style.color = '#555';
+
+            figure.appendChild(newImg);
+            figure.appendChild(caption);
+
+            block.replaceWith(figure);
+        }
+    });
+
+    // 2. Generic Iframe/Video preservation (Future: ensure they aren't stripped if simple)
+    // Currently, cleanAttributes might kill iframes if src is not allowed?
+    // sanitizeAndFixContent allows 'src', 'href' etc.
+    // Iframes should be checked in sanitizeAndFixContent to ensure they have width/height or allowed domains?
+    // For now, focusing on BBC block transformation as requested.
+}
+
 /**
  * Strips attributes and fixes image sources.
  * @param {Element} root 
@@ -164,7 +206,12 @@ function sanitizeAndFixContent(root) {
         // 1. Attribute Stripping
         const attrs = [...el.attributes];
         attrs.forEach(attr => {
-            if (!allowedAttrs.includes(attr.name)) {
+            if (attr.name === 'class') {
+                // Special case: Preserve internal ReLeaf classes
+                if (!attr.value.includes('releaf-')) {
+                    el.removeAttribute('class');
+                }
+            } else if (!allowedAttrs.includes(attr.name)) {
                 el.removeAttribute(attr.name);
             }
         });
@@ -195,10 +242,12 @@ function extractContent() {
     // Remove hidden elements from the clone based on the original structure
     removeHiddenElements(article, clone);
 
+    // Transform video blocks before cleanup (to preserve them)
+    transformVideoBlocks(clone);
+
     // Remove noise (ads, sidebars, etc.)
     cleanupNodes(clone);
 
-    // Strip attributes and fix images
     // Strip attributes and fix images
     sanitizeAndFixContent(clone);
 

@@ -385,6 +385,43 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(extracted).not.toContain('SKIP ADVERTISEMENT');
     });
 
+    test('Should transform BBC video blocks into visible placeholders', () => {
+        const posterUrl = "poster.jpg";
+        document.body.innerHTML = `
+             <main>
+                 <h1>BBC News Article</h1>
+                 <p>Some intro text.</p>
+                 <div data-component="video-block" class="sc-some-random-class">
+                     <div class="nested-wrapper">
+                         <img src="${posterUrl}" alt="Video Poster" />
+                     </div>
+                 </div>
+                 <p>Some outro text.</p>
+             </main>
+         `;
+
+        const extracted = extractContent();
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+
+        // Check if data-component div is replaced
+        const videoBlock = div.querySelector('div[data-component="video-block"]');
+        expect(videoBlock).toBeNull(); // Should be gone
+
+        // Check for replacement figure
+        const figure = div.querySelector('figure.releaf-video-placeholder');
+        expect(figure).not.toBeNull();
+
+        // Check contents
+        const img = figure.querySelector('img');
+        expect(img).not.toBeNull();
+        expect(img.getAttribute('src')).toBe(posterUrl);
+
+        const caption = figure.querySelector('figcaption');
+        expect(caption).not.toBeNull();
+        expect(caption.textContent).toContain('[Video Content]');
+    });
+
     test('Should clean attributes but preserve href and src', () => {
         setupContent(`
             <div id="main">
