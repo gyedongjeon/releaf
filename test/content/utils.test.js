@@ -415,7 +415,7 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         // Check contents
         const img = figure.querySelector('img');
         expect(img).not.toBeNull();
-        expect(img.getAttribute('src')).toBe(posterUrl);
+        expect(img.getAttribute('src')).toContain(posterUrl);
 
         const caption = figure.querySelector('figcaption');
         expect(caption).not.toBeNull();

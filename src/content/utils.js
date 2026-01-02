@@ -147,6 +147,46 @@ function cleanupNodes(element) {
     element.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
 }
 
+/**
+ * Recursively searches for an image source in Light and Open Shadow DOM.
+ * @param {Element} root 
+ * @returns {string|null}
+ */
+function findPosterImage(root) {
+    // 1. Check Light DOM
+    const img = root.querySelector('img');
+    if (img && img.src) return img.src;
+
+    // 2. Traversal for Shadow DOM
+    // We need to walk the tree because querySelector doesn't pierce shadow roots
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    let currentNode = walker.currentNode;
+
+    while (currentNode) {
+        if (currentNode.shadowRoot) {
+            const found = findPosterImage(currentNode.shadowRoot);
+            if (found) return found;
+        }
+        currentNode = walker.nextNode();
+    }
+    return null;
+}
+
+/**
+ * Prepares video blocks by extracting poster images from Shadow DOM
+ * and attaching them as data attributes to the original elements BEFORE cloning.
+ * @param {Element} root 
+ */
+function prepareVideoBlocks(root) {
+    const bbcVideos = root.querySelectorAll('div[data-component="video-block"]');
+    bbcVideos.forEach(block => {
+        const posterSrc = findPosterImage(block);
+        if (posterSrc) {
+            block.dataset.releafPoster = posterSrc;
+        }
+    });
+}
+
 
 /**
  * Transforms complex video blocks (like BBC) into simple, visible placeholders.
@@ -156,15 +196,18 @@ function transformVideoBlocks(root) {
     // 1. BBC Video Blocks
     const bbcVideos = root.querySelectorAll('div[data-component="video-block"]');
     bbcVideos.forEach(block => {
-        const img = block.querySelector('img');
-        if (img) {
+        // Prefer the extracted poster from Original DOM (via data attribute)
+        // Fallback to internal img if exists (rare for BBC)
+        const imgSrc = block.dataset.releafPoster || (block.querySelector('img') ? block.querySelector('img').src : null);
+
+        if (imgSrc) {
             const figure = document.createElement('figure');
             figure.style.margin = '2rem 0';
             figure.style.textAlign = 'center';
             figure.className = 'releaf-video-placeholder'; // Marker for testing/styling
 
-            const newImg = img.cloneNode(true);
-            // newImg is handled by sanitizeAndFixContent later, but we ensure it's clean here too
+            const newImg = document.createElement('img');
+            newImg.src = imgSrc;
             newImg.style.width = '100%';
             newImg.style.height = 'auto';
             newImg.style.display = 'block';
@@ -235,6 +278,9 @@ function sanitizeAndFixContent(root) {
  */
 function extractContent() {
     let article = findMainContent(document);
+
+    // Prepare content on Original DOM (e.g. extract Shadow DOM data)
+    prepareVideoBlocks(article);
 
     // Deep clone to manipulate safely
     const clone = article.cloneNode(true);
