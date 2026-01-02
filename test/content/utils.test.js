@@ -318,6 +318,54 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(extracted).toContain(bodyText);
     });
 
+    test('Should extract missing summary and remove ads (NYT Style)', () => {
+        const title = "NYT Article Title";
+        const summary = "This is the article summary.";
+        const bodyText = "This is the lengthy article content. ".repeat(20);
+
+        document.body.innerHTML = `
+             <div id="top-wrapper">
+                 <div id="top-slug">Advertisement</div>
+                 <a href="#">SKIP ADVERTISEMENT</a>
+             </div>
+             <main>
+                 <h1>${title}</h1>
+                 <p id="article-summary">${summary}</p>
+                 <section name="articleBody">
+                     <p>${bodyText}</p>
+                 </section>
+             </main>
+         `;
+
+        // 1. extractContent selects 'section[name="articleBody"]' (specifically added in utils)
+        // 2. It misses #article-summary (outside)
+        // 3. It misses H1 (outside)
+        // 4. cleanupNodes should handle #top-wrapper? (Not in body content though)
+
+        const extracted = extractContent();
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+
+        // Verify Title restored
+        const h1 = div.querySelector('h1');
+        expect(h1).not.toBeNull();
+        expect(h1.textContent).toBe(title);
+
+        // Verify Summary restored
+        const sumEl = div.querySelector('#article-summary');
+        expect(sumEl).not.toBeNull();
+        expect(sumEl.textContent).toBe(summary);
+
+        // Verify Summary position (after H1)
+        expect(h1.nextElementSibling).toBe(sumEl);
+
+        // Verify Body content
+        expect(extracted).toContain(bodyText);
+
+        // Verify Ad Noise not present (it wasn't in body anyway, but good to check)
+        expect(extracted).not.toContain('SKIP ADVERTISEMENT');
+    });
+
     test('Should clean attributes but preserve href and src', () => {
         setupContent(`
             <div id="main">

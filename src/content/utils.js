@@ -139,7 +139,9 @@ function cleanupNodes(element) {
         '[class*="tag"]', '[class*="keyword"]',
         // Generic footer patterns
         '[class*="copyright"]', '[class*="footer"]', '[class*="related"]',
-        '[id*="copyright"]', '[id*="footer"]', '[id*="related"]'
+        '[id*="copyright"]', '[id*="footer"]', '[id*="related"]',
+        // NYT / Ad noise
+        '#top-wrapper', '#top-slug', 'div[class*="ad-"]'
     ];
 
     element.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
@@ -203,6 +205,8 @@ function extractContent() {
     // Heuristic: If the extracted content doesn't have an H1, try to find one in the doc
     // and prepend it. Use the first H1 found in the document.
     const hasTitle = clone.querySelector('h1');
+    let titleElement = hasTitle;
+
     if (!hasTitle) {
         const docTitle = document.querySelector('h1');
         if (docTitle) {
@@ -212,6 +216,28 @@ function extractContent() {
             titleClone.removeAttribute('id');
             titleClone.removeAttribute('style');
             clone.insertBefore(titleClone, clone.firstChild);
+            titleElement = titleClone;
+        }
+    }
+
+    // Heuristic: Check for missing article summary/subtitle (common in NYT)
+    const hasSummary = clone.querySelector('#article-summary');
+    if (!hasSummary) {
+        const docSummary = document.querySelector('#article-summary');
+        if (docSummary) {
+            const summaryClone = docSummary.cloneNode(true);
+            summaryClone.removeAttribute('class');
+            summaryClone.removeAttribute('style');
+            // Insert after title if possible, otherwise at top
+            if (titleElement && titleElement.nextSibling) {
+                clone.insertBefore(summaryClone, titleElement.nextSibling);
+            } else if (titleElement) {
+                // Title is last child, append
+                clone.appendChild(summaryClone);
+            } else {
+                // No title, prepend
+                clone.insertBefore(summaryClone, clone.firstChild);
+            }
         }
     }
 
