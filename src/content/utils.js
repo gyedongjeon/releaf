@@ -20,7 +20,11 @@ function findMainContent(root) {
         '.entry-content', '#story-body',
         '.content', '#content-area', '.page-content',
         '[role="main"]', '.post-body', '.report-content',
-        '.document-body', '#report-body'
+        '.document-body', '#report-body',
+        // ZDNet Korea & Generic Schema.org
+        '#articleBody', '[itemprop="articleBody"]', '.view_cont',
+        // Global Giants (NYT, Dev.to, Substack)
+        'section[name="articleBody"]', '#article-body', '.body.markup'
     ];
 
     for (const selector of candidates) {
@@ -135,10 +139,98 @@ function cleanupNodes(element) {
         '[class*="tag"]', '[class*="keyword"]',
         // Generic footer patterns
         '[class*="copyright"]', '[class*="footer"]', '[class*="related"]',
-        '[id*="copyright"]', '[id*="footer"]', '[id*="related"]'
+        '[id*="copyright"]', '[id*="footer"]', '[id*="related"]',
+        // NYT / Ad noise
+        '#top-wrapper', '#top-slug', 'div[class*="ad-"]'
     ];
 
     element.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
+}
+
+/**
+ * Recursively searches for an image source in Light and Open Shadow DOM.
+ * @param {Element} root 
+ * @returns {string|null}
+ */
+function findPosterImage(root) {
+    // 1. Check Light DOM
+    const img = root.querySelector('img');
+    if (img && img.src) return img.src;
+
+    // 2. Traversal for Shadow DOM
+    // We need to walk the tree because querySelector doesn't pierce shadow roots
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    let currentNode = walker.currentNode;
+
+    while (currentNode) {
+        if (currentNode.shadowRoot) {
+            const found = findPosterImage(currentNode.shadowRoot);
+            if (found) return found;
+        }
+        currentNode = walker.nextNode();
+    }
+    return null;
+}
+
+/**
+ * Prepares video blocks by extracting poster images from Shadow DOM
+ * and attaching them as data attributes to the original elements BEFORE cloning.
+ * @param {Element} root 
+ */
+function prepareVideoBlocks(root) {
+    const bbcVideos = root.querySelectorAll('div[data-component="video-block"]');
+    bbcVideos.forEach(block => {
+        const posterSrc = findPosterImage(block);
+        if (posterSrc) {
+            block.dataset.releafPoster = posterSrc;
+        }
+    });
+}
+
+
+/**
+ * Transforms complex video blocks (like BBC) into simple, visible placeholders.
+ * @param {Element} root 
+ */
+function transformVideoBlocks(root) {
+    // 1. BBC Video Blocks
+    const bbcVideos = root.querySelectorAll('div[data-component="video-block"]');
+    bbcVideos.forEach(block => {
+        // Prefer the extracted poster from Original DOM (via data attribute)
+        // Fallback to internal img if exists (rare for BBC)
+        const imgSrc = block.dataset.releafPoster || (block.querySelector('img') ? block.querySelector('img').src : null);
+
+        if (imgSrc) {
+            const figure = document.createElement('figure');
+            figure.style.margin = '2rem 0';
+            figure.style.textAlign = 'center';
+            figure.className = 'releaf-video-placeholder'; // Marker for testing/styling
+            figure.dataset.action = "restore"; // Click action
+
+            const newImg = document.createElement('img');
+            newImg.src = imgSrc;
+            newImg.style.width = '100%';
+            newImg.style.height = 'auto';
+            newImg.style.display = 'block';
+
+            const caption = document.createElement('figcaption');
+            caption.textContent = '▶ Play Video (Exit Reader View)';
+            caption.style.fontWeight = 'bold';
+            caption.style.marginTop = '0.5rem';
+            caption.style.color = '#555';
+
+            figure.appendChild(newImg);
+            figure.appendChild(caption);
+
+            block.replaceWith(figure);
+        }
+    });
+
+    // 2. Generic Iframe/Video preservation (Future: ensure they aren't stripped if simple)
+    // Currently, cleanAttributes might kill iframes if src is not allowed?
+    // sanitizeAndFixContent allows 'src', 'href' etc.
+    // Iframes should be checked in sanitizeAndFixContent to ensure they have width/height or allowed domains?
+    // For now, focusing on BBC block transformation as requested.
 }
 
 /**
@@ -149,7 +241,7 @@ function sanitizeAndFixContent(root) {
     const walk = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
     let currentNode = walk.nextNode(); // Skip root
 
-    const allowedAttrs = ['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original'];
+    const allowedAttrs = ['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original', 'data-action'];
 
     while (currentNode) {
         const el = currentNode;
@@ -158,7 +250,12 @@ function sanitizeAndFixContent(root) {
         // 1. Attribute Stripping
         const attrs = [...el.attributes];
         attrs.forEach(attr => {
-            if (!allowedAttrs.includes(attr.name)) {
+            if (attr.name === 'class') {
+                // Special case: Preserve internal ReLeaf classes
+                if (!attr.value.includes('releaf-')) {
+                    el.removeAttribute('class');
+                }
+            } else if (!allowedAttrs.includes(attr.name)) {
                 el.removeAttribute(attr.name);
             }
         });
@@ -183,17 +280,144 @@ function sanitizeAndFixContent(root) {
 function extractContent() {
     let article = findMainContent(document);
 
+    // Prepare content on Original DOM (e.g. extract Shadow DOM data)
+    prepareVideoBlocks(article);
+
     // Deep clone to manipulate safely
     const clone = article.cloneNode(true);
 
     // Remove hidden elements from the clone based on the original structure
     removeHiddenElements(article, clone);
 
+    // Transform video blocks before cleanup (to preserve them)
+    transformVideoBlocks(clone);
+
     // Remove noise (ads, sidebars, etc.)
     cleanupNodes(clone);
 
     // Strip attributes and fix images
     sanitizeAndFixContent(clone);
+
+    // Heuristic: If the extracted content doesn't have an H1, try to find one in the doc
+    // and prepend it. Use the first H1 found in the document.
+    const hasTitle = clone.querySelector('h1');
+    let titleElement = hasTitle;
+
+    if (!hasTitle) {
+        const docTitle = document.querySelector('h1');
+        if (docTitle) {
+            const titleClone = docTitle.cloneNode(true);
+            // Ensure title is clean
+            titleClone.removeAttribute('class');
+            titleClone.removeAttribute('id');
+            titleClone.removeAttribute('style');
+            clone.insertBefore(titleClone, clone.firstChild);
+            titleElement = titleClone;
+        }
+    }
+
+    // Heuristic: Check for missing article summary/subtitle (common in NYT)
+    const hasSummary = clone.querySelector('#article-summary');
+    let summaryElement = hasSummary;
+
+    if (!hasSummary) {
+        const docSummary = document.querySelector('#article-summary');
+        if (docSummary) {
+            const summaryClone = docSummary.cloneNode(true);
+            summaryClone.removeAttribute('class');
+            summaryClone.removeAttribute('style');
+
+            // Insert after title if possible, otherwise at top
+            if (titleElement && titleElement.nextSibling) {
+                clone.insertBefore(summaryClone, titleElement.nextSibling);
+            } else if (titleElement) {
+                // Title is last child, append
+                clone.appendChild(summaryClone);
+            } else {
+                // No title, prepend
+                clone.insertBefore(summaryClone, clone.firstChild);
+            }
+            summaryElement = summaryClone;
+        }
+    }
+
+    // Heuristic: Check for missing lead image (NYT: figure in header)
+    // Even if content has images, check if the *LEAD* image (in header) is missing.
+    const leadFigure = document.querySelector('header figure');
+
+    if (leadFigure) {
+        // Check if this specific lead image is already in the clone
+        // We can check by src, but checking if the clone contains a similar structure is hard.
+        // Easiest: extract src from leadFigure, check if clone has img with same src.
+        const leadImg = leadFigure.querySelector('img');
+        const leadSrc = leadImg ? (leadImg.getAttribute('src') || leadImg.getAttribute('data-src')) : null;
+
+        let alreadyHasLead = false;
+        if (leadSrc) {
+            // Check all images in clone
+            const cloneImages = clone.querySelectorAll('img');
+            for (const img of cloneImages) {
+                if (img.src === leadSrc || img.getAttribute('src') === leadSrc || img.getAttribute('data-src') === leadSrc) {
+                    alreadyHasLead = true;
+                    break;
+                }
+            }
+        }
+
+        if (!alreadyHasLead) {
+            const figureClone = leadFigure.cloneNode(true);
+            // Clean up figure
+            figureClone.removeAttribute('class');
+            figureClone.removeAttribute('style');
+            sanitizeAndFixContent(figureClone); // Apply standard image fixes
+
+            // Insert location: After summary (if exists), or After title, or Top
+            let insertTarget = summaryElement || titleElement;
+
+            if (insertTarget && insertTarget.nextSibling) {
+                clone.insertBefore(figureClone, insertTarget.nextSibling);
+            } else if (insertTarget) {
+                clone.appendChild(figureClone);
+            } else {
+                clone.insertBefore(figureClone, clone.firstChild);
+            }
+        }
+    } else if (!clone.querySelector('img')) {
+        // Fallback: If NO images at all in clone, and no header figure, try first figure in doc
+        // (This covers the original case where body has 0 images)
+        const firstFigure = document.querySelector('figure');
+        if (firstFigure) {
+            // ... (Simple check to avoid duplicating if logic above failed)
+            const figImg = firstFigure.querySelector('img');
+            const figSrc = figImg ? (figImg.getAttribute('src') || figImg.getAttribute('data-src')) : null;
+
+            let hasIt = false;
+            if (figSrc) {
+                const cloneImages = clone.querySelectorAll('img');
+                for (const img of cloneImages) {
+                    if (img.src === figSrc || img.getAttribute('src') === figSrc) {
+                        hasIt = true; break;
+                    }
+                }
+            }
+
+            if (!hasIt) {
+                const figureClone = firstFigure.cloneNode(true);
+                figureClone.removeAttribute('class');
+                figureClone.removeAttribute('style');
+                sanitizeAndFixContent(figureClone);
+
+                let insertTarget = summaryElement || titleElement;
+                if (insertTarget && insertTarget.nextSibling) {
+                    clone.insertBefore(figureClone, insertTarget.nextSibling);
+                } else if (insertTarget) {
+                    clone.appendChild(figureClone);
+                } else {
+                    clone.insertBefore(figureClone, clone.firstChild);
+                }
+            }
+        }
+    }
 
     return clone.innerHTML;
 }

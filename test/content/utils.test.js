@@ -253,6 +253,176 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(extracted).not.toContain('Related News');
     });
 
+    test('Should prepend document title if missing in extracted content (ZDNet Style)', () => {
+        // ZDNet: Title is h1 outside, content is #articleBody
+        const title = "ZDNet News Title";
+        const bodyContent = "This is the actual news content. ".repeat(20); // > 200 chars to pass heuristic
+        document.body.innerHTML = `
+            <div class="header">
+                <h1>${title}</h1>
+            </div>
+            <div class="wrapper">
+                <div id="articleBody">
+                    <p>${bodyContent}</p>
+                </div>
+            </div>
+        `;
+
+        const extracted = extractContent();
+
+        // It should extract #articleBody (because it's in the list now)
+        expect(extracted).toContain(bodyContent);
+
+        // It should ALSO contain the title, because we appended it manually
+        expect(extracted).toContain(title);
+
+        // Check order: Title first
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+        expect(div.firstElementChild.tagName).toBe('H1');
+        expect(div.firstElementChild.textContent).toBe(title);
+    });
+
+    test('Should restore title if it was removed by cleanup (Wikipedia Style)', () => {
+        // Wikipedia: H1 is often in a <header> or div that gets cleaned up.
+        // Setup: Main content has H1 inside <header>, and body text.
+        const title = "Wikipedia Article Title";
+        const bodyText = "This is the encyclopedia content. ".repeat(20);
+
+        document.body.innerHTML = `
+            <main id="content">
+                <header class="mw-body-header">
+                    <h1>${title}</h1>
+                </header>
+                <div id="bodyContent">
+                    <p>${bodyText}</p>
+                </div>
+            </main>
+        `;
+
+        // 1. extractContent finds 'main#content' (contains header + body)
+        // 2. removeHiddenElements...
+        // 3. cleanupNodes removes <header> (so H1 is GONE from clone)
+        // 4. sanitizeAndFixContent...
+        // 5. title fallback checks for H1. It's gone.
+        // 6. It finds doc H1 and prepends it.
+
+        const extracted = extractContent();
+
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+
+        // H1 should be present (restored)
+        expect(div.querySelector('h1')).not.toBeNull();
+        expect(div.querySelector('h1').textContent).toBe(title);
+        expect(extracted).toContain(bodyText);
+    });
+
+    test('Should extract missing summary, lead image, and remove ads (NYT Style)', () => {
+        const title = "NYT Article Title";
+        const summary = "This is the article summary.";
+        const bodyText = "This is the lengthy article content. ".repeat(20);
+        const imageUrl = "lead-image.jpg";
+        const captionText = "A caption for the lead image.";
+        const bodyImageUrl = "body-image.jpg";
+
+        document.body.innerHTML = `
+             <header>
+                 <figure>
+                     <img src="${imageUrl}" />
+                     <figcaption>${captionText}</figcaption>
+                 </figure>
+             </header>
+             <div id="top-wrapper">
+                 <div id="top-slug">Advertisement</div>
+                 <a href="#">SKIP ADVERTISEMENT</a>
+             </div>
+             <main>
+                 <h1>${title}</h1>
+                 <p id="article-summary">${summary}</p>
+                 <section name="articleBody">
+                     <p>${bodyText}</p>
+                     <img src="${bodyImageUrl}" />
+                 </section>
+             </main>
+         `;
+
+        // 1. extractContent selects 'section[name="articleBody"]'
+        // 2. Misses H1, Summary, Image
+        // 3. Fallbacks should restore all three in order: H1 -> Summary -> Image -> Body
+        // 4. IMPORTANT: Logic should NOT skip lead image just because body has an image!
+
+        const extracted = extractContent();
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+
+        // Verify Title
+        const h1 = div.querySelector('h1');
+        expect(h1).not.toBeNull();
+        expect(h1.textContent).toBe(title);
+
+        // Verify Summary (after H1)
+        const sumEl = div.querySelector('#article-summary');
+        expect(sumEl).not.toBeNull();
+        expect(h1.nextElementSibling).toBe(sumEl);
+
+        // Verify Lead Image (after Summary)
+        const figures = div.querySelectorAll('figure');
+        // Should have 1 figure (from header). Body img is plain img tag.
+        expect(figures.length).toBe(1);
+        const figure = figures[0];
+        expect(figure.querySelector('img').getAttribute('src')).toBe(imageUrl);
+        expect(figure.querySelector('figcaption').textContent).toBe(captionText);
+
+        // Verify Image position (after Summary)
+        expect(sumEl.nextElementSibling).toBe(figure);
+
+        // Verify Body content
+        expect(extracted).toContain(bodyText);
+        expect(extracted).toContain(bodyImageUrl);
+
+        // Verify Ad Noise not present
+        expect(extracted).not.toContain('SKIP ADVERTISEMENT');
+    });
+
+    test('Should transform BBC video blocks into visible placeholders', () => {
+        const posterUrl = "poster.jpg";
+        document.body.innerHTML = `
+             <main>
+                 <h1>BBC News Article</h1>
+                 <p>Some intro text.</p>
+                 <div data-component="video-block" class="sc-some-random-class">
+                     <div class="nested-wrapper">
+                         <img src="${posterUrl}" alt="Video Poster" />
+                     </div>
+                 </div>
+                 <p>Some outro text.</p>
+             </main>
+         `;
+
+        const extracted = extractContent();
+        const div = document.createElement('div');
+        div.innerHTML = extracted;
+
+        // Check if data-component div is replaced
+        const videoBlock = div.querySelector('div[data-component="video-block"]');
+        expect(videoBlock).toBeNull(); // Should be gone
+
+        // Check for replacement figure
+        const figure = div.querySelector('figure.releaf-video-placeholder');
+        expect(figure).not.toBeNull();
+        expect(figure.getAttribute('data-action')).toBe('restore');
+
+        // Check contents
+        const img = figure.querySelector('img');
+        expect(img).not.toBeNull();
+        expect(img.getAttribute('src')).toContain(posterUrl);
+
+        const caption = figure.querySelector('figcaption');
+        expect(caption).not.toBeNull();
+        expect(caption.textContent).toContain('Play Video (Exit Reader View)');
+    });
+
     test('Should clean attributes but preserve href and src', () => {
         setupContent(`
             <div id="main">

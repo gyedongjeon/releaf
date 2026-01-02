@@ -223,7 +223,6 @@ function setupTooltip(element, text) {
     element.addEventListener('mouseleave', hideTooltip);
 }
 
-
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         createReaderContainer,

@@ -99,6 +99,17 @@ function enableReleaf() {
     initializeSettings(container, settingsPopup, updateSettingsUI);
     setupTutorial(container);
 
+    // 4. Video Restoration Logic
+    // If user clicks on a video placeholder, we restore the original page.
+    content.addEventListener('click', (e) => {
+        const placeholder = e.target.closest('[data-action="restore"]');
+        if (placeholder) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleReleaf(); // Close Reader Mode
+        }
+    });
+
     // 4. Immersive Mode
     resetIdleTimer();
     document.addEventListener('mousemove', handleUserActivity);
@@ -215,7 +226,10 @@ function setupTapNavigation(container) {
     });
 
     container.addEventListener('mouseup', (e) => {
-        if (e.target.closest('.releaf-btn') || e.target.closest('.releaf-bottom-menu') || e.target.closest('.releaf-settings-popup')) return;
+        if (e.target.closest('.releaf-btn') ||
+            e.target.closest('.releaf-bottom-menu') ||
+            e.target.closest('.releaf-settings-popup') ||
+            e.target.closest('[data-action]')) return;
 
         const deltaX = Math.abs(e.clientX - tapStartX);
         const deltaY = Math.abs(e.clientY - tapStartY);
