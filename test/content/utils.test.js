@@ -324,6 +324,7 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         const bodyText = "This is the lengthy article content. ".repeat(20);
         const imageUrl = "lead-image.jpg";
         const captionText = "A caption for the lead image.";
+        const bodyImageUrl = "body-image.jpg";
 
         document.body.innerHTML = `
              <header>
@@ -341,6 +342,7 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
                  <p id="article-summary">${summary}</p>
                  <section name="articleBody">
                      <p>${bodyText}</p>
+                     <img src="${bodyImageUrl}" />
                  </section>
              </main>
          `;
@@ -348,6 +350,7 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         // 1. extractContent selects 'section[name="articleBody"]'
         // 2. Misses H1, Summary, Image
         // 3. Fallbacks should restore all three in order: H1 -> Summary -> Image -> Body
+        // 4. IMPORTANT: Logic should NOT skip lead image just because body has an image!
 
         const extracted = extractContent();
         const div = document.createElement('div');
@@ -364,8 +367,10 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(h1.nextElementSibling).toBe(sumEl);
 
         // Verify Lead Image (after Summary)
-        const figure = div.querySelector('figure');
-        expect(figure).not.toBeNull();
+        const figures = div.querySelectorAll('figure');
+        // Should have 1 figure (from header). Body img is plain img tag.
+        expect(figures.length).toBe(1);
+        const figure = figures[0];
         expect(figure.querySelector('img').getAttribute('src')).toBe(imageUrl);
         expect(figure.querySelector('figcaption').textContent).toBe(captionText);
 
@@ -374,6 +379,7 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
 
         // Verify Body content
         expect(extracted).toContain(bodyText);
+        expect(extracted).toContain(bodyImageUrl);
 
         // Verify Ad Noise not present
         expect(extracted).not.toContain('SKIP ADVERTISEMENT');

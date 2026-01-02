@@ -246,12 +246,29 @@ function extractContent() {
     }
 
     // Heuristic: Check for missing lead image (NYT: figure in header)
-    const hasImage = clone.querySelector('img') || clone.querySelector('figure');
-    if (!hasImage) {
-        // Try specific selectors for lead images/figures outside body
-        const leadFigure = document.querySelector('header figure') || document.querySelector('figure');
+    // Even if content has images, check if the *LEAD* image (in header) is missing.
+    const leadFigure = document.querySelector('header figure');
 
-        if (leadFigure) {
+    if (leadFigure) {
+        // Check if this specific lead image is already in the clone
+        // We can check by src, but checking if the clone contains a similar structure is hard.
+        // Easiest: extract src from leadFigure, check if clone has img with same src.
+        const leadImg = leadFigure.querySelector('img');
+        const leadSrc = leadImg ? (leadImg.getAttribute('src') || leadImg.getAttribute('data-src')) : null;
+
+        let alreadyHasLead = false;
+        if (leadSrc) {
+            // Check all images in clone
+            const cloneImages = clone.querySelectorAll('img');
+            for (const img of cloneImages) {
+                if (img.src === leadSrc || img.getAttribute('src') === leadSrc || img.getAttribute('data-src') === leadSrc) {
+                    alreadyHasLead = true;
+                    break;
+                }
+            }
+        }
+
+        if (!alreadyHasLead) {
             const figureClone = leadFigure.cloneNode(true);
             // Clean up figure
             figureClone.removeAttribute('class');
@@ -267,6 +284,41 @@ function extractContent() {
                 clone.appendChild(figureClone);
             } else {
                 clone.insertBefore(figureClone, clone.firstChild);
+            }
+        }
+    } else if (!clone.querySelector('img')) {
+        // Fallback: If NO images at all in clone, and no header figure, try first figure in doc
+        // (This covers the original case where body has 0 images)
+        const firstFigure = document.querySelector('figure');
+        if (firstFigure) {
+            // ... (Simple check to avoid duplicating if logic above failed)
+            const figImg = firstFigure.querySelector('img');
+            const figSrc = figImg ? (figImg.getAttribute('src') || figImg.getAttribute('data-src')) : null;
+
+            let hasIt = false;
+            if (figSrc) {
+                const cloneImages = clone.querySelectorAll('img');
+                for (const img of cloneImages) {
+                    if (img.src === figSrc || img.getAttribute('src') === figSrc) {
+                        hasIt = true; break;
+                    }
+                }
+            }
+
+            if (!hasIt) {
+                const figureClone = firstFigure.cloneNode(true);
+                figureClone.removeAttribute('class');
+                figureClone.removeAttribute('style');
+                sanitizeAndFixContent(figureClone);
+
+                let insertTarget = summaryElement || titleElement;
+                if (insertTarget && insertTarget.nextSibling) {
+                    clone.insertBefore(figureClone, insertTarget.nextSibling);
+                } else if (insertTarget) {
+                    clone.appendChild(figureClone);
+                } else {
+                    clone.insertBefore(figureClone, clone.firstChild);
+                }
             }
         }
     }
