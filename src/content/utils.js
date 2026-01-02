@@ -205,6 +205,7 @@ function transformVideoBlocks(root) {
             figure.style.margin = '2rem 0';
             figure.style.textAlign = 'center';
             figure.className = 'releaf-video-placeholder'; // Marker for testing/styling
+            figure.dataset.action = "restore"; // Click action
 
             const newImg = document.createElement('img');
             newImg.src = imgSrc;
@@ -213,7 +214,7 @@ function transformVideoBlocks(root) {
             newImg.style.display = 'block';
 
             const caption = document.createElement('figcaption');
-            caption.textContent = '▶ [Video Content]';
+            caption.textContent = '▶ Play Video (Exit Reader View)';
             caption.style.fontWeight = 'bold';
             caption.style.marginTop = '0.5rem';
             caption.style.color = '#555';
@@ -240,7 +241,7 @@ function sanitizeAndFixContent(root) {
     const walk = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
     let currentNode = walk.nextNode(); // Skip root
 
-    const allowedAttrs = ['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original'];
+    const allowedAttrs = ['src', 'href', 'alt', 'title', 'rowspan', 'colspan', 'data-src', 'data-original', 'data-action'];
 
     while (currentNode) {
         const el = currentNode;

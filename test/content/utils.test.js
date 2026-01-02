@@ -411,6 +411,7 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         // Check for replacement figure
         const figure = div.querySelector('figure.releaf-video-placeholder');
         expect(figure).not.toBeNull();
+        expect(figure.getAttribute('data-action')).toBe('restore');
 
         // Check contents
         const img = figure.querySelector('img');
@@ -419,7 +420,7 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
 
         const caption = figure.querySelector('figcaption');
         expect(caption).not.toBeNull();
-        expect(caption.textContent).toContain('[Video Content]');
+        expect(caption.textContent).toContain('Play Video (Exit Reader View)');
     });
 
     test('Should clean attributes but preserve href and src', () => {

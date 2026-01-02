@@ -99,6 +99,17 @@ function enableReleaf() {
     initializeSettings(container, settingsPopup, updateSettingsUI);
     setupTutorial(container);
 
+    // 4. Video Restoration Logic
+    // If user clicks on a video placeholder, we restore the original page.
+    content.addEventListener('click', (e) => {
+        const placeholder = e.target.closest('[data-action="restore"]');
+        if (placeholder) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleReleaf(); // Close Reader Mode
+        }
+    });
+
     // 4. Immersive Mode
     resetIdleTimer();
     document.addEventListener('mousemove', handleUserActivity);
