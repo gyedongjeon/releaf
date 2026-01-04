@@ -254,7 +254,11 @@ function navigatePage(content, direction) {
     const gap = parseFloat(style.columnGap) || 0;
     const effWidth = Math.round(content.clientWidth - pLeft - pRight + gap);
 
-    const targetPage = Math.floor((currentVirtual + (direction * 10)) / effWidth) + direction;
+    // Determine current page index (rounded to nearest)
+    // This fixes the issue where subtracting offset from a perfect boundary floored to the previous page index
+    const currentPageIndex = Math.round(currentVirtual / effWidth);
+    const targetPage = currentPageIndex + direction;
+
     // Bounds check
     const totalPages = Math.max(1, Math.ceil((content.scrollWidth - 10) / effWidth));
 

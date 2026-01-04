@@ -120,6 +120,9 @@ describe('Re:Leaf Main Logic', () => {
             content.scrollLeft = 0;
             content.scrollTo = jest.fn((options) => { content.scrollLeft = options.left; });
 
+            // Mock clientWidth to avoid effWidth=0 -> NaN
+            Object.defineProperty(content, 'clientWidth', { value: 1000, configurable: true });
+
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
             expect(content.scrollTo).toHaveBeenCalledWith({ left: 0, behavior: 'smooth' });
             expect(content.scrollLeft).toBe(0);
@@ -205,6 +208,34 @@ describe('Re:Leaf Main Logic', () => {
 
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
             expect(content.scrollTo).not.toHaveBeenCalled();
+            jest.useRealTimers();
+        });
+        test('Bug Repro: Should navigate to previous page correctly (not skip one)', () => {
+            jest.useFakeTimers();
+            setupContent('<p>Content</p>');
+            enableReleaf();
+            const content = document.querySelector('.releaf-content');
+            content.scrollTo = jest.fn();
+
+            Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true });
+            Object.defineProperty(content, 'clientWidth', { value: 1000, configurable: true });
+            Object.defineProperty(content, 'scrollWidth', { value: 3000, configurable: true });
+
+            // Start at Page 2 (2000px)
+            // Page 0: 0-1000
+            // Page 1: 1000-2000
+            // Page 2: 2000-3000
+            content.scrollLeft = 2000;
+            // Mock getVirtualScroll return via style transform (since getVirtualScroll parses it)
+            // But wait, the test setup for getVirtualScroll parses style.transform.
+            // We need to ensure logic uses scrollLeft if transform is 0.
+            content.style.transform = 'translateX(0)';
+
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+
+            // Expect to go to Page 1 (1000px)
+            // Bug expectation: It goes to Page 0 (0px)
+            expect(content.scrollTo).toHaveBeenCalledWith({ left: 1000, behavior: 'smooth' });
             jest.useRealTimers();
         });
     });
