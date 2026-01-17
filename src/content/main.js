@@ -167,7 +167,7 @@ function initializeSettings(container, popup, updateUI) {
 
     // Load
     chrome.storage.sync.get([
-        'releaf_bg', 'releaf_text', 'releaf_accent', 'releaf_theme_id',
+        'releaf_bg', 'releaf_text', 'releaf_accent', 'releaf_link', 'releaf_theme_id',
         'releaf_fontSize', 'releaf_lineHeight',
         'releaf_marginV', 'releaf_marginH',
         'releaf_pageView'
@@ -176,6 +176,7 @@ function initializeSettings(container, popup, updateUI) {
         if (items.releaf_bg) container.style.setProperty('--releaf-bg-rgb', items.releaf_bg);
         if (items.releaf_text) container.style.setProperty('--releaf-text-rgb', items.releaf_text);
         if (items.releaf_accent) container.style.setProperty('--releaf-accent-rgb', items.releaf_accent);
+        if (items.releaf_link) container.style.setProperty('--releaf-link-rgb', items.releaf_link);
         if (items.releaf_fontSize) container.style.setProperty('--releaf-font-size', `${items.releaf_fontSize}px`);
         if (items.releaf_lineHeight) container.style.setProperty('--releaf-line-height', items.releaf_lineHeight);
         if (items.releaf_marginV) container.style.setProperty('--releaf-margin-v', `${items.releaf_marginV}px`);
@@ -191,12 +192,12 @@ function initializeSettings(container, popup, updateUI) {
 
     // Wire up Inputs
     const themeColors = {
-        light: { bg: '255, 255, 255', text: '34, 34, 34', accent: '234, 234, 234' },
-        sepia: { bg: '252, 246, 229', text: '74, 60, 49', accent: '234, 221, 207' },
-        mint: { bg: '232, 245, 233', text: '46, 80, 54', accent: '200, 230, 201' },
-        forest: { bg: '21, 128, 61', text: '236, 253, 245', accent: '22, 101, 52' },
-        gray: { bg: '107, 114, 128', text: '243, 244, 246', accent: '75, 85, 99' },
-        dark: { bg: '26, 26, 26', text: '212, 212, 212', accent: '51, 51, 51' }
+        light: { bg: '255, 255, 255', text: '34, 34, 34', accent: '234, 234, 234', link: '59, 130, 246' },
+        sepia: { bg: '252, 246, 229', text: '74, 60, 49', accent: '234, 221, 207', link: '146, 64, 14' },
+        mint: { bg: '232, 245, 233', text: '46, 80, 54', accent: '200, 230, 201', link: '21, 94, 117' },
+        forest: { bg: '21, 128, 61', text: '236, 253, 245', accent: '22, 101, 52', link: '253, 224, 71' },
+        gray: { bg: '107, 114, 128', text: '243, 244, 246', accent: '75, 85, 99', link: '253, 224, 71' },
+        dark: { bg: '26, 26, 26', text: '212, 212, 212', accent: '51, 51, 51', link: '96, 165, 250' }
     };
 
     popup.querySelectorAll('.releaf-color-swatch').forEach(swatch => {
@@ -209,10 +210,12 @@ function initializeSettings(container, popup, updateUI) {
             container.style.setProperty('--releaf-bg-rgb', colors.bg);
             container.style.setProperty('--releaf-text-rgb', colors.text);
             container.style.setProperty('--releaf-accent-rgb', colors.accent);
+            container.style.setProperty('--releaf-link-rgb', colors.link);
 
             save('releaf_bg', colors.bg);
             save('releaf_text', colors.text);
             save('releaf_accent', colors.accent);
+            save('releaf_link', colors.link);
             save('releaf_theme_id', theme);
         };
     });
