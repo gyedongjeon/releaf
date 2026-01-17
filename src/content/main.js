@@ -131,12 +131,22 @@ function enableReleaf() {
 function triggerDownload(content) {
     const mdBody = domToMarkdown(content);
 
-    // Use H1 or fallback.
-    let titleRaw = (document.querySelector('h1') ? document.querySelector('h1').textContent : 'article').trim();
+    // Use document.title or fallback
+    let titleRaw = (document.title || 'article').trim();
 
-    // Sanitize filename: remove controls and illegal chars
-    let title = titleRaw.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
+    // Sanitize filename:
+    // 1. Remove illegal chars
+    // 2. Replace spaces with underscores
+    // 3. Collapse multiple underscores
+    // 4. Trim underscores
+    let title = titleRaw
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
     if (!title) title = 'article';
+    if (title.length > 60) title = title.substring(0, 60).replace(/_$/, '');
 
     const date = new Date().toISOString().split('T')[0];
     const filename = `${date}_${title}.md`;
