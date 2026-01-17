@@ -465,4 +465,120 @@ describe('Re:Leaf Utils (Content Extraction)', () => {
         expect(svg).toContain('<svg');
         expect(svg).toContain('width="22"');
     });
+
+    describe('Markdown Conversion', () => {
+        test('Should convert headers, paragraphs, and lists', () => {
+            const html = `
+                <h1>Title</h1>
+                <p>Paragraph text.</p>
+                <h2>Subtitle</h2>
+                <ul>
+                    <li>Item 1</li>
+                    <li>Item 2</li>
+                </ul>
+            `;
+            const md = domToMarkdown(html);
+            expect(md).toContain('# Title');
+            expect(md).toContain('Paragraph text.');
+            expect(md).toContain('## Subtitle');
+            expect(md).toContain('- Item 1');
+            expect(md).toContain('- Item 2');
+        });
+
+        test('Should convert inline formatting (bold, italic, links, code)', () => {
+            const html = `
+                <p>
+                    <strong>Bold</strong> and <em>Italic</em> and <a href="http://example.com">Link</a>.
+                    Also <code>inline code</code>.
+                </p>
+            `;
+            const md = domToMarkdown(html);
+            expect(md).toContain('**Bold**');
+            expect(md).toContain('*Italic*');
+            expect(md).toContain('[Link](http://example.com/)');
+            expect(md).toContain('`inline code`');
+        });
+
+        test('Should convert images', () => {
+            const html = `<img src="img.jpg" alt="Alt Text" />`;
+            const md = domToMarkdown(html);
+            // .trim() removes surrounding newlines for single element
+            expect(md).toBe('![Alt Text](http://localhost/img.jpg)');
+        });
+
+        test('Should NOT add newlines for images inside links', () => {
+            const html = `<a href="link.html"><img src="img.jpg" alt="Alt" /></a>`;
+            const md = domToMarkdown(html);
+            expect(md).toBe('[![Alt](http://localhost/img.jpg)](http://localhost/link.html)');
+        });
+
+        test('Should convert blockquotes and code blocks', () => {
+            const html = `
+                <blockquote>Quote text</blockquote>
+                <pre><code>const a = 1;</code></pre>
+            `;
+            const md = domToMarkdown(html);
+            expect(md).toContain('> Quote text');
+            expect(md).toContain('```\nconst a = 1;\n```');
+        });
+
+        test('Should convert basic tables to pipe-separated text', () => {
+            const html = `
+                <table>
+                    <tr>
+                        <th>Header 1</th>
+                        <th>Header 2</th>
+                    </tr>
+                    <tr>
+                        <td>Cell 1</td>
+                        <td>Cell 2</td>
+                    </tr>
+                </table>
+            `;
+            const md = domToMarkdown(html);
+            // Use regex for flexible whitespace check
+            expect(md).toMatch(/\|\s*Header 1\s*\|\s*Header 2\s*\|/);
+            expect(md).toMatch(/\|\s*Cell 1\s*\|\s*Cell 2\s*\|/);
+        });
+    });
+
+    describe('Frontmatter Generation', () => {
+        test('Should prepend valid YAML frontmatter', () => {
+            const md = '# Hello';
+            const meta = {
+                title: 'Test Title',
+                url: 'http://example.com',
+                date: '2026-01-01'
+            };
+            const result = addFrontmatter(md, meta);
+            expect(result).toContain('---');
+            expect(result).toContain('title: "Test Title"');
+            expect(result).toContain('url: "http://example.com"');
+            expect(result).toContain('date: 2026-01-01');
+            expect(result).toContain('# Hello');
+        });
+
+        test('Should escape quotes in title', () => {
+            const result = addFrontmatter('', { title: 'Title with "quotes"', date: '2026-01-01' });
+            expect(result).toContain('title: "Title with \\"quotes\\""');
+        });
+    });
+
+    test('Should remove Wikipedia specific noise', () => {
+        setupContent(`
+            <div id="content">
+                <div class="mw-indicators">Indicators</div>
+                <div id="siteSub">From Wikipedia</div>
+                <div class="mw-editsection">Edit</div>
+                <p>Real Content</p>
+                <div id="catlinks">Categories</div>
+            </div>
+        `);
+        const extracted = extractContent();
+        expect(extracted).toContain('Real Content');
+        expect(extracted).not.toContain('Indicators');
+        expect(extracted).not.toContain('From Wikipedia');
+        expect(extracted).not.toContain('Edit');
+        expect(extracted).not.toContain('Categories');
+    });
 });

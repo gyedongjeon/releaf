@@ -54,6 +54,13 @@ function createBottomMenu(container, content) {
     // Page Counter
     const pageCounter = createPageCounter(content);
 
+    // Download Button
+    const downloadBtn = document.createElement("button");
+    downloadBtn.className = "releaf-btn";
+    downloadBtn.dataset.role = "download-btn";
+    downloadBtn.title = "Download Markdown (.md)";
+    downloadBtn.innerHTML = createIconSvg('download');
+
     // Close Button
     const closeBtn = document.createElement("button");
     closeBtn.className = "releaf-btn";
@@ -66,6 +73,7 @@ function createBottomMenu(container, content) {
 
     bottomMenu.appendChild(settingsBtn);
     bottomMenu.appendChild(pageCounter);
+    bottomMenu.appendChild(downloadBtn);
     bottomMenu.appendChild(closeBtn);
 
     return bottomMenu;

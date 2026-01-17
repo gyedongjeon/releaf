@@ -117,6 +117,8 @@ function cleanupNodes(element) {
         // Daum/Naver specific noise
         '.layer_util', '.box_setting', '.util_view', '.wrap_util',
         '.box_layer', '.img_mask', '.btn_util',
+        // Daum/Kakao Headers
+        '#kakaoHead', '.gnb_comm', '.d_head', '#kakaoGnb',
         // Daum/Naver Footers & Related
         '.foot_view', '.box_recommend', '.txt_copyright', '.box_etc',
         '#foot_view', '.kakao_ad', '.art_copy',
@@ -141,7 +143,10 @@ function cleanupNodes(element) {
         '[class*="copyright"]', '[class*="footer"]', '[class*="related"]',
         '[id*="copyright"]', '[id*="footer"]', '[id*="related"]',
         // NYT / Ad noise
-        '#top-wrapper', '#top-slug', 'div[class*="ad-"]'
+        '#top-wrapper', '#top-slug', 'div[class*="ad-"]',
+        // Wikipedia Cleanup
+        '.mw-indicators', '#siteSub', '.mw-editsection', '.hatnote',
+        '.shortdescription', '#catlinks', '.navbox', '.infobox'
     ];
 
     element.querySelectorAll(unwantedSelectors.join(', ')).forEach(el => el.remove());
@@ -439,7 +444,9 @@ function createIconSvg(name) {
         'margin-h': '<path d="M3 12h18"/><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/>',
         view: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="15" y1="3" y2="3"/><line x1="9" x2="15" y1="21" y2="21"/>',
         'page-1': '<rect x="5" y="4" width="14" height="16" rx="2" />',
-        'page-2': '<rect x="4" y="4" width="16" height="16" rx="2" /><line x1="12" y1="4" x2="12" y2="20" />'
+        'page-2': '<rect x="4" y="4" width="16" height="16" rx="2" /><line x1="12" y1="4" x2="12" y2="20" />',
+        // Markdown Mark (M + Down Arrow)
+        download: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M7 8v8"></path><path d="M17 8v8"></path><path d="M7 8l5 5l5-5"></path><line x1="12" y1="8" x2="12" y2="13"></line>'
     };
     return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[name] || ''}</svg>`;
 }
@@ -453,6 +460,148 @@ if (typeof module !== 'undefined' && module.exports) {
         cleanupNodes,
         sanitizeAndFixContent,
         extractContent,
+        extractContent,
+        domToMarkdown,
+        addFrontmatter,
         createIconSvg
     };
+}
+/**
+ * Converts a DOM element or document fragment to Markdown.
+ * @param {Node} root 
+ * @returns {string}
+ */
+function domToMarkdown(root) {
+    let output = '';
+
+    const process = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            // Collapse whitespace unless inside a pre tag
+            let text = node.textContent;
+            if (node.parentElement && !node.parentElement.closest('pre')) {
+                text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ');
+            }
+            output += text;
+            return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const tag = node.tagName.toLowerCase();
+        let prefix = '', suffix = '';
+
+        // Block elements
+        if (tag.match(/^h[1-6]$/)) {
+            const level = parseInt(tag[1]);
+            prefix = '\n\n' + '#'.repeat(level) + ' '; // Ensure spacing before headers
+            suffix = '\n\n';
+        } else if (tag === 'p') {
+            prefix = '\n\n';
+            suffix = '\n\n';
+        } else if (tag === 'ul' || tag === 'ol') {
+            prefix = '\n\n';
+            suffix = '\n\n';
+        } else if (tag === 'li') {
+            prefix = '\n- '; // Ensure list items start on new line
+            suffix = '';
+        } else if (tag === 'blockquote') {
+            prefix = '\n> ';
+            suffix = '\n\n';
+        } else if (tag === 'pre') {
+            prefix = '\n```\n';
+            suffix = '\n```\n\n';
+        } else if (tag === 'code') {
+            if (node.parentElement && node.parentElement.tagName.toLowerCase() !== 'pre') {
+                prefix = '`';
+                suffix = '`';
+            }
+        }
+        // Tables
+        else if (tag === 'tr') {
+            prefix = '\n| ';
+            suffix = '';
+        } else if (tag === 'td' || tag === 'th') {
+            suffix = ' | ';
+        }
+        else if (tag === 'div') {
+            prefix = '\n';
+            suffix = '\n';
+        }
+        else if (tag === 'b' || tag === 'strong') {
+            prefix = '**';
+            suffix = '**';
+        } else if (tag === 'i' || tag === 'em') {
+            prefix = '*';
+            suffix = '*';
+        } else if (tag === 'a') {
+            // Contextual ignore: If empty href, just render text
+            if (!node.href || node.getAttribute('href').trim() === '') {
+                // Just process children
+            } else {
+                output += '[';
+                node.childNodes.forEach(child => process(child));
+                output += `](${node.href})`;
+                return;
+            }
+        } else if (tag === 'img') {
+            const alt = node.alt || '';
+            const src = node.src;
+            if (src) {
+                // No newlines if inside link or table cell
+                const parentTag = node.parentElement ? node.parentElement.tagName.toLowerCase() : '';
+                if (parentTag === 'a' || parentTag === 'td' || parentTag === 'th') {
+                    output += `![${alt}](${src})`;
+                } else {
+                    output += `\n![${alt}](${src})\n`;
+                }
+            }
+            return;
+        } else if (tag === 'br') {
+            output += '  \n';
+            return;
+        } else if (tag === 'hr') {
+            output += '\n---\n';
+            return;
+        }
+
+        output += prefix;
+        node.childNodes.forEach(child => process(child));
+        output += suffix;
+    };
+
+    // If root is a string, wrap it in a temp container
+    if (typeof root === 'string') {
+        const div = document.createElement('div');
+        div.innerHTML = root;
+        root = div;
+    }
+
+    if (root.childNodes) {
+        root.childNodes.forEach(child => process(child));
+    } else {
+        process(root);
+    }
+
+    // Determine clean up: replace multiple newlines/spaces with max 2 newlines
+    return output.replace(/(\n\s*){3,}/g, '\n\n').trim();
+}
+
+/**
+ * Prepend YAML frontmatter to markdown content.
+ * @param {string} markdown 
+ * @param {Object} metadata { title, url, date }
+ * @returns {string}
+ */
+function addFrontmatter(markdown, { title, url, date }) {
+    const safeTitle = (title || 'Untitled').replace(/"/g, '\\"');
+    const safeUrl = url || '';
+    const safeDate = date || new Date().toISOString().split('T')[0];
+
+    return `---
+title: "${safeTitle}"
+url: "${safeUrl}"
+date: ${safeDate}
+---
+
+${markdown}`;
 }
