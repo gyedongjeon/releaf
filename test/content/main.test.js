@@ -334,4 +334,89 @@ describe('Re:Leaf Main Logic', () => {
             jest.useRealTimers();
         });
     });
+    describe('6. Download Logic', () => {
+        beforeAll(() => {
+            global.URL.createObjectURL = jest.fn(() => 'blob:url');
+            global.URL.revokeObjectURL = jest.fn();
+        });
+
+        test('Should sanitize filename: replace spaces, remove illegal chars', () => {
+            // Setup with document.title containing illegal chars and spaces
+            Object.defineProperty(document, 'title', {
+                value: '  Big  Bad / Title: *Thinking*  ',
+                configurable: true
+            });
+            setupContent('<p>Content</p>');
+
+            // Mock anchor behavior
+            const mockClick = jest.fn();
+            const mockAnchor = { style: {}, click: mockClick };
+            const originalCreateElement = document.createElement;
+
+            document.createElement = jest.fn((tag) => {
+                if (tag === 'a') return mockAnchor;
+                return originalCreateElement.call(document, tag);
+            });
+
+            // Spy on appendChild/removeChild
+            const appendSpy = jest.spyOn(document.body, 'appendChild').mockImplementation(() => { });
+            const removeSpy = jest.spyOn(document.body, 'removeChild').mockImplementation(() => { });
+
+            // Trigger the download
+            const content = document.querySelector('#wrapper');
+            triggerDownload(content);
+
+            // Expectation Logic:
+            // Original: "  Big  Bad / Title: *Thinking*  "
+            // Trimmed Raw: "Big  Bad / Title: *Thinking*"
+            // Remove illegal (/:*): "Big  Bad  Title Thinking"
+            // Spaces to _: "Big__Bad__Title_Thinking"
+            // Collapse _: "Big_Bad_Title_Thinking"
+
+            const date = new Date().toISOString().split('T')[0];
+            const expectedFilename = `${date}_Big_Bad_Title_Thinking.md`;
+
+            expect(mockAnchor.download).toBe(expectedFilename);
+            expect(mockClick).toHaveBeenCalled();
+
+            // Cleanup
+            document.createElement = originalCreateElement;
+            appendSpy.mockRestore();
+            removeSpy.mockRestore();
+        });
+
+        test('Should truncate long filenames to 60 chars', () => {
+            const longTitle = 'A'.repeat(100);
+            Object.defineProperty(document, 'title', {
+                value: longTitle,
+                configurable: true
+            });
+            setupContent('<p>Content</p>');
+
+            const mockClick = jest.fn();
+            const mockAnchor = { style: {}, click: mockClick };
+            const originalCreateElement = document.createElement;
+
+            document.createElement = jest.fn((tag) => {
+                if (tag === 'a') return mockAnchor;
+                return originalCreateElement.call(document, tag);
+            });
+
+            const appendSpy = jest.spyOn(document.body, 'appendChild').mockImplementation(() => { });
+            const removeSpy = jest.spyOn(document.body, 'removeChild').mockImplementation(() => { });
+
+            const content = document.querySelector('#wrapper');
+            triggerDownload(content);
+
+            const date = new Date().toISOString().split('T')[0];
+            const expectedTitle = 'A'.repeat(60);
+            const expectedFilename = `${date}_${expectedTitle}.md`;
+
+            expect(mockAnchor.download).toBe(expectedFilename);
+
+            document.createElement = originalCreateElement;
+            appendSpy.mockRestore();
+            removeSpy.mockRestore();
+        });
+    });
 });

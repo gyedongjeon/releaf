@@ -4,7 +4,6 @@
  */
 
 // Listen for the extension icon click
-// Listen for the extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id) return;
 
