@@ -1,6 +1,6 @@
 {
   "name": "releaf",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Re:Leaf",
   "main": "index.js",
   "scripts": {
