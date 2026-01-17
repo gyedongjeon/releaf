@@ -91,6 +91,13 @@ function enableReleaf() {
         setupTooltip(closeBtn, "Close Reader");
     }
 
+    // Download button logic
+    const downloadBtn = bottomMenu.querySelector('[data-role="download-btn"]');
+    if (downloadBtn) {
+        downloadBtn.onclick = () => triggerDownload(content);
+        setupTooltip(downloadBtn, "Download as Markdown");
+    }
+
     document.body.appendChild(container);
     document.body.style.overflow = "hidden";
 
@@ -110,11 +117,47 @@ function enableReleaf() {
         }
     });
 
-    // 4. Immersive Mode
+    // 5. Immersive Mode
     resetIdleTimer();
     document.addEventListener('mousemove', handleUserActivity);
     document.addEventListener('keydown', handleUserActivity);
     window.addEventListener('resize', handleResize);
+}
+
+/**
+ * Trigger download of content as Markdown.
+ * @param {HTMLElement} content 
+ */
+function triggerDownload(content) {
+    const mdBody = domToMarkdown(content);
+
+    // Use H1 or fallback.
+    let titleRaw = (document.querySelector('h1') ? document.querySelector('h1').textContent : 'article').trim();
+
+    // Sanitize filename: remove controls and illegal chars
+    let title = titleRaw.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
+    if (!title) title = 'article';
+
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `${date}_${title}.md`;
+
+    // Construct Frontmatter
+    const finalContent = addFrontmatter(mdBody, {
+        title: titleRaw,
+        url: window.location.href,
+        date: date
+    });
+
+    const blob = new Blob([finalContent], { type: 'text/markdown' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
 }
 
 // --- Logic Initialization ---
@@ -471,6 +514,8 @@ if (typeof module !== "undefined" && module.exports) {
         getVirtualScroll,
         handleResize,
         handleKeyNavigation,
-        setupTapNavigation
+        handleKeyNavigation,
+        setupTapNavigation,
+        triggerDownload
     };
 }
